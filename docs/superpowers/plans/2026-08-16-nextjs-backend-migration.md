@@ -55,34 +55,44 @@
 
 ## Task 1: Sao lưu dữ liệu hiện có
 
-Dữ liệu thật chỉ tồn tại trong localStorage của một trình duyệt. `.env` rỗng nên Supabase chưa từng nhận bản ghi nào. Mất trình duyệt đó là mất sạch. Không được bắt đầu bất cứ việc gì khác trước task này.
+**Nguồn dữ liệu chuẩn là bảng `public.month_sessions` trên Supabase.** Chủ dự án
+đã quyết bỏ localStorage khỏi đường di cư, nên không kết xuất từ trình duyệt.
+
+Kiểm tra ngày 16/08/2026: bảng có 2 bản ghi — `session-2026-07` (6 thành viên,
+1 buổi đánh, 2 ảnh QR, 80 kB) và `session-2026-08` (rỗng).
+
+Vẫn phải kết xuất ra file trước, vì Task 8 xóa sạch bảng trước khi nạp lại.
+Không được bắt đầu bất cứ việc gì đụng tới dữ liệu trước task này.
 
 **Files:**
-- Create: `~/badminton-backup-2026-08-16.json` (ngoài repo, không commit)
+- Create: `~/badminton-backup-2026-08-16.json` (từ Supabase, ngoài repo)
 
 **Interfaces:**
 - Produces: file JSON mảng `MonthSession[]`, đầu vào của Task 8.
 
-- [ ] **Step 1: Chạy ứng dụng hiện tại**
+- [ ] **Step 1: Kết xuất từ Supabase**
 
-```bash
-bun install
-bun run dev
+Dùng Supabase MCP chạy truy vấn sau, rồi lưu mảng JSON trả về vào `~/badminton-backup-2026-08-16.json`:
+
+```sql
+SELECT jsonb_agg(data ORDER BY id) AS sessions FROM public.month_sessions;
 ```
 
-Mở `http://localhost:3000`.
-
-- [ ] **Step 2: Xuất dữ liệu**
-
-Bấm "Sao lưu & Dữ liệu" ở chân trang, chọn xuất JSON. Lưu file ra ngoài repo, ví dụ `~/badminton-backup-2026-08-16.json`.
-
-- [ ] **Step 3: Kiểm chứng file sao lưu**
+- [ ] **Step 2: Kiểm chứng file sao lưu**
 
 ```bash
 node -e "const d=require(process.env.HOME+'/badminton-backup-2026-08-16.json'); console.log('Số tháng:', d.length); d.forEach(m => console.log(m.monthKey, '| thành viên:', m.members.length, '| buổi:', (m.dailySessions||[]).length, '| khoản chi:', m.expenses.length));"
 ```
 
-Đối chiếu các con số với những gì nhìn thấy trên giao diện. Sai lệch thì dừng lại, không đi tiếp.
+Expected: 2 tháng — `2026-07` với 6 thành viên và 1 buổi đánh, `2026-08` rỗng. Khác con số này thì dừng lại, vì nghĩa là dữ liệu đã đổi kể từ lúc lập kế hoạch.
+
+- [ ] **Step 3: Kiểm chứng hai ảnh QR còn nguyên trong file**
+
+```bash
+node -e "const d=require(process.env.HOME+'/badminton-backup-2026-08-16.json'); const qr=d.flatMap(m=>m.members).filter(x=>x.qrCodeImage); console.log('Số ảnh QR:', qr.length); qr.forEach(x=>console.log('-', x.name, Math.round(x.qrCodeImage.length/1024)+' kB'));"
+```
+
+Expected: 2 ảnh — Hiếu (~60 kB) và Phú đẹp trai (~19 kB).
 
 - [ ] **Step 4: Đảm bảo file không bị commit nhầm**
 
