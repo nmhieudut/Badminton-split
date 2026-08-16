@@ -36,6 +36,20 @@
       "when": 1786892695709,
       "tag": "0004_enable_rls_on_admins",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786895415861,
+      "tag": "0005_classy_pandemic",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786895418251,
+      "tag": "0006_enable_rls_on_courts",
+      "breakpoints": true
     }
   ]
 }

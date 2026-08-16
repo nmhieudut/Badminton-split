@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Edit3,
   HandCoins,
+  MapPin,
   MoreVertical,
   ShieldCheck,
   Users,
@@ -18,6 +19,7 @@ import {
 import type { ViewMonth } from '../lib/view-types';
 import { AuthButton } from './AuthButton';
 import { AdminsModal, type DongAdmin } from './AdminsModal';
+import { CourtsModal, type DongSan } from './CourtsModal';
 import { YearMonthPickerModal } from './YearMonthPickerModal';
 import { EditMonthModal } from './EditMonthModal';
 import { BadmintonEstimatorModal } from './BadmintonEstimatorModal';
@@ -41,6 +43,8 @@ interface NavbarProps {
   isSuperAdmin: boolean;
   /** Danh sách admin — chỉ nạp khi người xem là super admin, ngược lại rỗng. */
   danhSachAdmin: DongAdmin[];
+  /** Danh sách sân — chỉ nạp cho admin, ngược lại rỗng. */
+  danhSachSan: DongSan[];
 }
 
 /** Dịch monthKey đi `delta` tháng, giữ định dạng `YYYY-MM`. */
@@ -66,6 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAdmin,
   isSuperAdmin,
   danhSachAdmin,
+  danhSachSan,
 }) => {
   const pathname = usePathname();
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -73,6 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
   const [isAdminsOpen, setIsAdminsOpen] = useState(false);
+  const [isCourtsOpen, setIsCourtsOpen] = useState(false);
   const bocTienIch = useRef<HTMLDivElement>(null);
 
   /*
@@ -247,6 +253,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Dự toán kỳ tới</span>
                   </button>
 
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsOpen(false);
+                        setIsCourtsOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                    >
+                      <MapPin className="h-4 w-4 text-indigo-500" />
+                      <span>Quản lý sân</span>
+                    </button>
+                  )}
+
                   {isSuperAdmin && (
                     <>
                       <div className="my-1 border-t border-slate-100" />
@@ -328,6 +348,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           canDelete={monthKeys.length > 1}
           onClose={() => setIsEditOpen(false)}
         />
+      )}
+
+      {isCourtsOpen && (
+        <CourtsModal danhSach={danhSachSan} onClose={() => setIsCourtsOpen(false)} />
       )}
 
       {isAdminsOpen && (

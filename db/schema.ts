@@ -112,3 +112,19 @@ export const admins = pgTable('admins', {
   addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
   addedBy: text('added_by'),
 });
+
+/**
+ * Sân hay chơi, dùng làm danh sách chọn khi ghi buổi đánh.
+ *
+ * Buổi đánh KHÔNG trỏ tới bảng này: nó chép lại tên và giá tại thời điểm ghi.
+ * Nhờ vậy sửa giá một sân không làm đổi số tiền của những buổi đã chốt — bảng
+ * này chỉ là nơi lấy giá trị mặc định cho nhanh.
+ */
+export const courts = pgTable('courts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  defaultFee: bigint('default_fee', { mode: 'number' }).notNull().default(0),
+  /** Nghỉ chơi sân nào thì tắt cờ này — ẩn khỏi dropdown mà không mất lịch sử. */
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

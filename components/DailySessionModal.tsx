@@ -10,6 +10,8 @@ interface DailySessionModalProps {
   members: ViewMember[];
   initialData: ViewDailySession | null;
   defaults: SessionDefaults;
+  /** Sân đang dùng, đổ vào dropdown. Rỗng thì form nhắc thêm sân trước. */
+  danhSachSan: { id: string; name: string; defaultFee: number }[];
   defaultDate?: string;
   onSave: (input: DailySessionInput) => Promise<void>;
   onClose: () => void;
@@ -29,6 +31,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
   members,
   initialData,
   defaults,
+  danhSachSan,
   defaultDate,
   onSave,
   onClose,
@@ -155,7 +158,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
     if (isSaving) return;
 
     const nextErrors: typeof errors = {};
-    if (!courtName.trim()) nextErrors.courtName = 'Vui lòng nhập tên sân đánh!';
+    if (!courtName.trim()) nextErrors.courtName = 'Vui lòng chọn sân đánh!';
     if (!courtPayerId) {
       nextErrors.courtPayer = 'Vui lòng chọn thành viên đã đứng ra thanh toán tiền sân!';
     }
@@ -265,19 +268,45 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                  Tên / Số sân <span className="text-red-500">*</span>
+                  Sân đánh <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={courtName}
-                  onChange={(e) => setCourtName(e.target.value)}
-                  placeholder="Nhập tên sân đánh"
-                  required
+                  onChange={(e) => {
+                    const ten = e.target.value;
+                    setCourtName(ten);
+                    // Chọn sân thì điền luôn giá mặc định của sân đó. Buổi đánh
+                    // chép lại con số này, nên sau đó sửa giá sân cũng không
+                    // làm đổi tiền của buổi đã ghi.
+                    const san = danhSachSan.find((c) => c.name === ten);
+                    if (san) setCourtFeeInput(String(san.defaultFee));
+                  }}
                   aria-invalid={!!errors.courtName}
                   className={`${inputClass} ${errors.courtName ? 'border-rose-400' : ''}`}
-                />
+                >
+                  <option value="">— Chọn sân —</option>
+                  {/*
+                    Sân của buổi đang sửa có thể đã bị tắt hoặc đổi tên; vẫn phải
+                    liệt kê ra, nếu không mở form sửa sẽ thấy ô trống và lưu lại
+                    là mất tên sân cũ.
+                  */}
+                  {!danhSachSan.some((c) => c.name === courtName) && courtName && (
+                    <option value={courtName}>{courtName} (không còn trong danh sách)</option>
+                  )}
+                  {danhSachSan.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name} — {formatVND(c.defaultFee)}
+                    </option>
+                  ))}
+                </select>
                 {errors.courtName && (
                   <p className="mt-1 text-[11px] font-semibold text-rose-600">{errors.courtName}</p>
+                )}
+                {danhSachSan.length === 0 && (
+                  <p className="mt-1 text-[11px] text-amber-700">
+                    Chưa có sân nào. Mở menu ba chấm trên thanh trên cùng, chọn
+                    &ldquo;Quản lý sân&rdquo; để thêm.
+                  </p>
                 )}
               </div>
 
@@ -294,20 +323,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 />
               </div>
             </div>
-
-            {/* Gợi ý sân lấy từ buổi gần nhất, không còn danh sách cứng */}
-            {defaults?.courtName && defaults.courtName !== courtName && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[10px] text-slate-400 font-medium">Buổi gần nhất:</span>
-                <button
-                  type="button"
-                  onClick={() => setCourtName(defaults.courtName)}
-                  className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  {defaults.courtName}
-                </button>
-              </div>
-            )}
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1">

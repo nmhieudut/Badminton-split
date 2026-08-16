@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, lt } from 'drizzle-orm';
 import { db } from './index';
 import {
   admins,
+  courts,
   dailySessions,
   members,
   monthMembers,
@@ -190,4 +191,30 @@ export async function listAdmins() {
     })
     .from(admins)
     .orderBy(asc(admins.email));
+}
+
+/** Toàn bộ sân, kể cả sân đã tắt — dùng cho màn hình quản lý. */
+export async function listCourts() {
+  return db
+    .select({
+      id: courts.id,
+      name: courts.name,
+      defaultFee: courts.defaultFee,
+      isActive: courts.isActive,
+    })
+    .from(courts)
+    .orderBy(asc(courts.name));
+}
+
+/** Chỉ sân đang dùng — đổ vào dropdown khi ghi buổi đánh. */
+export async function listActiveCourts() {
+  return db
+    .select({
+      id: courts.id,
+      name: courts.name,
+      defaultFee: courts.defaultFee,
+    })
+    .from(courts)
+    .where(eq(courts.isActive, true))
+    .orderBy(asc(courts.name));
 }

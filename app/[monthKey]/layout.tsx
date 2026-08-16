@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
-import { getMonthData, listAdmins, listMonthKeys } from '../../db/queries';
+import { getMonthData, listAdmins, listCourts, listMonthKeys } from '../../db/queries';
 import { Navbar } from '../../components/Navbar';
 import { getSessionUser, getVaiTro } from '../../lib/auth/session';
 import type { DongAdmin } from '../../components/AdminsModal';
+import type { DongSan } from '../../components/CourtsModal';
 
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -42,6 +43,9 @@ export default async function MonthLayout({
         })),
       ]
     : [];
+
+  // Chỉ admin mới mở được màn hình quản lý sân, nên khách khỏi tốn truy vấn.
+  const danhSachSan: DongSan[] = isAdmin ? await listCourts() : [];
   const unsettledCount = data.settlement.transfers.filter((t) => !t.isSettled).length;
 
   return (
@@ -58,6 +62,7 @@ export default async function MonthLayout({
         isAdmin={isAdmin}
         isSuperAdmin={isSuperAdmin}
         danhSachAdmin={danhSachAdmin}
+        danhSachSan={danhSachSan}
       />
 
       {/*
