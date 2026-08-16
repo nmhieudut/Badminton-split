@@ -5,11 +5,14 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../../db';
+import { requireAdmin } from '../../lib/auth/session';
 import { members, monthMembers, months } from '../../db/schema';
 
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export async function createMonth(monthKey: string, carryOverPermanent = true) {
+  await requireAdmin();
+
   if (!MONTH_KEY.test(monthKey)) throw new Error('Mã tháng không hợp lệ');
 
   const [existing] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
@@ -44,11 +47,15 @@ export async function updateMonth(
   monthId: string,
   fields: { title?: string; note?: string | null; initialFund?: number }
 ) {
+  await requireAdmin();
+
   await db.update(months).set(fields).where(eq(months.id, monthId));
   revalidatePath('/', 'layout');
 }
 
 export async function deleteMonth(monthId: string) {
+  await requireAdmin();
+
   await db.delete(months).where(eq(months.id, monthId));
   revalidatePath('/', 'layout');
   redirect('/');

@@ -3,6 +3,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '../../db';
+import { requireAdmin } from '../../lib/auth/session';
 import {
   dailySessions,
   members,
@@ -21,6 +22,8 @@ export interface MemberInput {
 }
 
 export async function createMember(monthKey: string, input: MemberInput) {
+  await requireAdmin();
+
   const name = input.name.trim();
   if (!name) throw new Error('Tên thành viên không được để trống');
 
@@ -48,6 +51,8 @@ export async function createMember(monthKey: string, input: MemberInput) {
 }
 
 export async function updateMember(monthKey: string, memberId: string, input: MemberInput) {
+  await requireAdmin();
+
   const name = input.name.trim();
   if (!name) throw new Error('Tên thành viên không được để trống');
 
@@ -72,6 +77,8 @@ export async function updateMember(monthKey: string, memberId: string, input: Me
  * làm sai số tiền của những tháng đã chốt.
  */
 export async function removeMemberFromMonth(monthKey: string, memberId: string) {
+  await requireAdmin();
+
   const [month] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
   if (!month) throw new Error('Không tìm thấy tháng');
 
@@ -108,6 +115,8 @@ export async function removeMemberFromMonth(monthKey: string, memberId: string) 
 
 /** Thêm một người đã có sẵn vào tháng đang xem. */
 export async function addExistingMemberToMonth(monthKey: string, memberId: string) {
+  await requireAdmin();
+
   const [month] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
   if (!month) throw new Error('Không tìm thấy tháng');
 

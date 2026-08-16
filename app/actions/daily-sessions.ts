@@ -3,6 +3,7 @@
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '../../db';
+import { requireAdmin } from '../../lib/auth/session';
 import { dailySessions, monthMembers, months, sessionAttendees } from '../../db/schema';
 
 export interface DailySessionInput {
@@ -25,6 +26,8 @@ export interface DailySessionInput {
 }
 
 export async function saveDailySession(monthKey: string, input: DailySessionInput) {
+  await requireAdmin();
+
   const [month] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
   if (!month) throw new Error('Không tìm thấy tháng');
   if (input.attendeeIds.length === 0) throw new Error('Buổi đánh phải có ít nhất một người');
@@ -71,6 +74,8 @@ export async function saveDailySession(monthKey: string, input: DailySessionInpu
 }
 
 export async function deleteDailySession(monthKey: string, sessionId: string) {
+  await requireAdmin();
+
   await db.delete(dailySessions).where(eq(dailySessions.id, sessionId));
   revalidatePath(`/${monthKey}`, 'layout');
 }

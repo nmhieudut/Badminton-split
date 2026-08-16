@@ -3,6 +3,7 @@
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '../../db';
+import { requireAdmin } from '../../lib/auth/session';
 import { months, settledTransfers } from '../../db/schema';
 
 /**
@@ -17,6 +18,8 @@ export async function toggleTransferSettled(
   fromMemberId: string,
   toMemberId: string
 ) {
+  await requireAdmin();
+
   const [month] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
   if (!month) throw new Error('Không tìm thấy tháng');
 
