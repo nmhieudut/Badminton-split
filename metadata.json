@@ -1,0 +1,6 @@
+{
+  "name": "Badminton Split - Chia Tiền Cầu Lông",
+  "description": "Ứng dụng tính toán và chia tiền sân, tiền cầu lông, chi phí phát sinh hàng tháng cho nhóm cầu lông chính xác, minh bạch.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
