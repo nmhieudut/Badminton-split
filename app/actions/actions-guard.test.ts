@@ -14,6 +14,20 @@ const MIEN_TRU = new Set(['auth.ts']);
 const CHI_SUPER_ADMIN = new Set(['admins.ts']);
 
 /**
+ * Các action CỐ Ý mở cho mọi người, kể cả khách chưa đăng nhập.
+ *
+ * Danh sách này phải rất ngắn, và mỗi dòng phải nêu được lý do. Mục đích của
+ * nó không phải để dễ bỏ chốt chặn, mà để việc bỏ chốt chặn trở thành một
+ * quyết định có tên, có người viết ra — thay vì một dòng code bị xóa lặng lẽ.
+ */
+const CONG_KHAI = new Map<string, string>([
+  [
+    'settlement.ts → toggleTransferSettled',
+    'Người vừa chuyển tiền tự tích; bắt đăng nhập chỉ để bấm một nút là rào cản lớn hơn giá trị nó bảo vệ.',
+  ],
+]);
+
+/**
  * Cắt lấy thân của một hàm.
  *
  * Phải đi hết danh sách tham số trước rồi mới tìm dấu `{` của thân hàm. Lấy
@@ -71,6 +85,16 @@ describe('mọi Server Action ghi dữ liệu đều có chốt chặn', () => {
     const chiSuperAdmin = CHI_SUPER_ADMIN.has(tep);
 
     for (const ten of tenHam) {
+      const khoa = `${tep} → ${ten}`;
+
+      if (CONG_KHAI.has(khoa)) {
+        it(`${khoa}() được khai báo là công khai, kèm lý do`, () => {
+          // Không kiểm chốt chặn, nhưng bắt buộc phải có lý do viết ra.
+          expect(CONG_KHAI.get(khoa)!.length).toBeGreaterThan(20);
+        });
+        continue;
+      }
+
       it(`${tep} → ${ten}() có chốt chặn`, () => {
         const than = layThanHam(nguon, ten);
         expect(

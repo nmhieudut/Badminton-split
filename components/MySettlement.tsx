@@ -17,7 +17,6 @@ interface MySettlementProps {
   /** Signed URL ảnh QR theo memberId; null nếu người đó chưa tải lên. */
   qrUrls: Record<string, string | null>;
   /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
-  isAdmin: boolean;
 }
 
 export const MySettlement: React.FC<MySettlementProps> = ({
@@ -26,7 +25,6 @@ export const MySettlement: React.FC<MySettlementProps> = ({
   rows,
   transfers,
   qrUrls,
-  isAdmin,
 }) => {
   const [meId, setMeId] = useState<string | null>(initialMeId);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -154,7 +152,7 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                   </p>
                 )}
 
-                {isAdmin && (
+                {(
                   <button
                     type="button"
                     onClick={() => danhDau(t)}
@@ -182,7 +180,7 @@ export const MySettlement: React.FC<MySettlementProps> = ({
           </p>
           <p className="mt-1 text-sm text-slate-600">
             còn {conChoNhan.length} người chưa chuyển.
-            {isAdmin ? ' Tích khi tiền đã về tài khoản.' : ''}
+ Tích khi tiền đã về tài khoản.
           </p>
 
           <ul className="mt-4 space-y-2">
@@ -200,7 +198,7 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                     <span className="font-mono text-sm font-bold text-slate-900">
                       {formatVND(t.amount)}
                     </span>
-                    {isAdmin && (
+                    {(
                       <button
                         type="button"
                         onClick={() => danhDau(t)}

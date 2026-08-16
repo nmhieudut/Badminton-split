@@ -5,7 +5,6 @@ import { getQrSignedUrl } from '../../../lib/storage';
 import { generateZaloReport } from '../../../lib/settlement/report';
 import { SettlementView } from '../../../components/SettlementView';
 import { COOKIE_TOI_LA } from '../../../lib/me-cookie';
-import { getVaiTro } from '../../../lib/auth/session';
 
 export default async function Page({ params }: { params: Promise<{ monthKey: string }> }) {
   const { monthKey } = await params;
@@ -21,8 +20,6 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
   const luu = (await cookies()).get(COOKIE_TOI_LA)?.value ?? null;
   const meId = luu && data.members.some((m) => m.id === luu) ? luu : null;
 
-  const vaiTro = await getVaiTro();
-  const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
 
   const report = generateZaloReport({
     title: data.month.title,
@@ -41,7 +38,6 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
       sessionCount={data.dailySessions.length}
       qrUrls={Object.fromEntries(qrPairs)}
       report={report}
-      isAdmin={isAdmin}
     />
   );
 }
