@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import type { ViewMonth } from '../lib/view-types';
+import { AuthButton } from './AuthButton';
 import { YearMonthPickerModal } from './YearMonthPickerModal';
 import { EditMonthModal } from './EditMonthModal';
 import { BadmintonEstimatorModal } from './BadmintonEstimatorModal';
@@ -26,6 +27,12 @@ interface NavbarProps {
   memberCount: number;
   /** Số giao dịch chưa chuyển khoản — hiện thành chấm báo trên tab Quyết toán. */
   unsettledCount: number;
+  /** Email người đang đăng nhập, null nếu là khách. */
+  email: string | null;
+  /** Đúng với cả admin lẫn super admin — điều khiển mọi nút nghiệp vụ. */
+  isAdmin: boolean;
+  /** Chỉ điều khiển đúng một thứ: mục quản lý quyền trong menu tiện ích. */
+  isSuperAdmin: boolean;
 }
 
 /** Dịch monthKey đi `delta` tháng, giữ định dạng `YYYY-MM`. */
@@ -45,6 +52,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   monthKeys,
   memberCount,
   unsettledCount,
+  email,
+  isAdmin,
+  isSuperAdmin,
 }) => {
   const pathname = usePathname();
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -150,6 +160,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             ))}
           </nav>
 
+          <div className="flex shrink-0 items-center gap-2">
+            <AuthButton email={email} isAdmin={isAdmin} />
+
           {/* Tiện ích */}
           <div className="relative shrink-0">
             <button
@@ -193,6 +206,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </>
             )}
+          </div>
           </div>
         </div>
       </header>

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getMonthData, listMonthKeys } from '../../db/queries';
 import { Navbar } from '../../components/Navbar';
+import { getSessionUser, getVaiTro } from '../../lib/auth/session';
 
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -18,6 +19,9 @@ export default async function MonthLayout({
   if (!data) notFound();
 
   const monthKeys = await listMonthKeys();
+
+  const [user, vaiTro] = await Promise.all([getSessionUser(), getVaiTro()]);
+  const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
   const unsettledCount = data.settlement.transfers.filter((t) => !t.isSettled).length;
 
   return (
@@ -28,6 +32,9 @@ export default async function MonthLayout({
         monthKeys={monthKeys}
         memberCount={data.members.length}
         unsettledCount={unsettledCount}
+        email={user?.email ?? null}
+        isAdmin={isAdmin}
+        isSuperAdmin={vaiTro === 'super_admin'}
       />
 
       {/*
