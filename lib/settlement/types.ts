@@ -1,5 +1,3 @@
-export type ExpenseCategory = 'court' | 'shuttlecock' | 'drink' | 'gathering' | 'other';
-
 export interface SettlementMember {
   id: string;
   name: string;
@@ -21,20 +19,9 @@ export interface SettlementDailySession {
   attendeeIds: string[];
 }
 
-export interface SettlementExpense {
-  id: string;
-  title: string;
-  category: ExpenseCategory;
-  amount: number;
-  paidById: string;
-  splitType: 'all' | 'custom';
-  participantIds: string[];
-}
-
 export interface SettlementInput {
   members: SettlementMember[];
   dailySessions: SettlementDailySession[];
-  expenses: SettlementExpense[];
 }
 
 export interface SettlementRow {
@@ -47,7 +34,6 @@ export interface SettlementRow {
   courtShare: number;
   shuttleShare: number;
   drinkShare: number;
-  expenseShare: number;
 }
 
 export interface Transfer {
@@ -61,7 +47,7 @@ export interface Transfer {
 export interface SettlementOutput {
   rows: SettlementRow[];
   transfers: Transfer[];
-  totalExpenses: number;
+  totalCost: number;
   totalCourtCost: number;
   totalShuttleCost: number;
   totalOtherCost: number;

@@ -29,13 +29,13 @@ const members = [
 
 describe('calculateSettlement', () => {
   it('ghi có cho người ứng tiền đúng khoản họ trả', () => {
-    const out = calculateSettlement({ members, dailySessions: [session()], expenses: [] });
+    const out = calculateSettlement({ members, dailySessions: [session()] });
     expect(out.rows.find((r) => r.memberId === 'a')!.totalPaid).toBe(180000);
     expect(out.rows.find((r) => r.memberId === 'b')!.totalPaid).toBe(100000);
   });
 
   it('chỉ chia cho người có mặt', () => {
-    const out = calculateSettlement({ members, dailySessions: [session()], expenses: [] });
+    const out = calculateSettlement({ members, dailySessions: [session()] });
     expect(out.rows.find((r) => r.memberId === 'c')!.totalShare).toBe(0);
     expect(out.rows.find((r) => r.memberId === 'c')!.sessionsAttendedCount).toBe(0);
   });
@@ -44,7 +44,6 @@ describe('calculateSettlement', () => {
     const out = calculateSettlement({
       members,
       dailySessions: [session({ attendeeIds: [] })],
-      expenses: [],
     });
     expect(out.rows.every((r) => r.totalShare > 0)).toBe(true);
     expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(280000);
@@ -61,7 +60,6 @@ describe('calculateSettlement', () => {
           shuttlecockPayerId: 'm0',
         }),
       ],
-      expenses: [],
     });
     expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(280000);
   });
@@ -70,72 +68,35 @@ describe('calculateSettlement', () => {
     const out = calculateSettlement({
       members,
       dailySessions: [session({ shuttlecockTotalFee: 90000 })],
-      expenses: [],
     });
     expect(out.totalShuttleCost).toBe(90000);
   });
 
-  it('khoản chi custom chỉ chia cho người trong danh sách', () => {
-    const out = calculateSettlement({
-      members,
-      dailySessions: [],
-      expenses: [
-        {
-          id: 'e1',
-          title: 'Chè',
-          category: 'gathering',
-          amount: 120000,
-          paidById: 'a',
-          splitType: 'custom',
-          participantIds: ['a', 'b'],
-        },
-      ],
-    });
-    expect(out.rows.find((r) => r.memberId === 'c')!.expenseShare).toBe(0);
-    expect(out.rows.find((r) => r.memberId === 'a')!.expenseShare).toBe(60000);
-  });
 
-  it('khoản chi splitType all chia cho mọi thành viên', () => {
-    const out = calculateSettlement({
-      members,
-      dailySessions: [],
-      expenses: [
-        {
-          id: 'e1',
-          title: 'Nước',
-          category: 'drink',
-          amount: 90000,
-          paidById: 'a',
-          splitType: 'all',
-          participantIds: [],
-        },
-      ],
-    });
-    expect(out.rows.every((r) => r.expenseShare === 30000)).toBe(true);
-  });
 
   it('tổng số dư ròng của cả nhóm bằng không', () => {
-    const out = calculateSettlement({ members, dailySessions: [session()], expenses: [] });
+    const out = calculateSettlement({ members, dailySessions: [session()] });
     expect(out.rows.reduce((s, r) => s + r.netBalance, 0)).toBe(0);
   });
 
-  it('không sinh giao dịch khi chênh lệch dưới 500 đồng', () => {
+
+  it('không sinh giao dịch khi chênh lệch dưới ngưỡng tiền lẻ', () => {
+    // Sân 600đ chia đôi: mỗi người chịu 300, người ứng tiền dôi ra 300 — dưới
+    // ngưỡng 500 nên không đáng bắt ai chuyển khoản.
     const out = calculateSettlement({
       members: [
         { id: 'a', name: 'An' },
         { id: 'b', name: 'Bình' },
       ],
-      dailySessions: [],
-      expenses: [
-        {
-          id: 'e1',
-          title: 'Lẻ',
-          category: 'other',
-          amount: 400,
-          paidById: 'a',
-          splitType: 'all',
-          participantIds: [],
-        },
+      dailySessions: [
+        session({
+          courtFee: 600,
+          courtPayerId: 'a',
+          shuttlecockCount: 0,
+          shuttlecockPricePerItem: 0,
+          shuttlecockPayerId: 'a',
+          attendeeIds: ['a', 'b'],
+        }),
       ],
     });
     expect(out.transfers).toEqual([]);
@@ -147,7 +108,6 @@ describe('calculateSettlement', () => {
       dailySessions: [
         session({ attendeeIds: ['a', 'b', 'c'], courtPayerId: 'a', shuttlecockPayerId: 'a' }),
       ],
-      expenses: [],
     });
     expect(out.transfers).toHaveLength(2);
     expect(out.transfers.every((t) => t.toMemberId === 'a')).toBe(true);
@@ -157,7 +117,7 @@ describe('calculateSettlement', () => {
   });
 
   it('cho kết quả giống hệt nhau giữa các lần chạy', () => {
-    const input: SettlementInput = { members, dailySessions: [session()], expenses: [] };
+    const input: SettlementInput = { members, dailySessions: [session()] };
     expect(calculateSettlement(input)).toEqual(calculateSettlement(input));
   });
 });
@@ -189,17 +149,17 @@ describe('điểm danh mồ côi — id không thuộc danh sách thành viên',
   };
 
   it('không để thất thoát đồng nào khi có id lạ', () => {
-    const out = calculateSettlement({ members, dailySessions: [buoi], expenses: [] });
+    const out = calculateSettlement({ members, dailySessions: [buoi] });
     expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(200000);
   });
 
   it('tổng số dư ròng vẫn bằng không', () => {
-    const out = calculateSettlement({ members, dailySessions: [buoi], expenses: [] });
+    const out = calculateSettlement({ members, dailySessions: [buoi] });
     expect(out.rows.reduce((s, r) => s + r.netBalance, 0)).toBe(0);
   });
 
   it('chia đều cho những người thật sự có trong kỳ', () => {
-    const out = calculateSettlement({ members, dailySessions: [buoi], expenses: [] });
+    const out = calculateSettlement({ members, dailySessions: [buoi] });
     expect(out.rows.find((r) => r.memberId === 'a')!.totalShare).toBe(100000);
     expect(out.rows.find((r) => r.memberId === 'b')!.totalShare).toBe(100000);
   });
@@ -208,28 +168,8 @@ describe('điểm danh mồ côi — id không thuộc danh sách thành viên',
     const out = calculateSettlement({
       members,
       dailySessions: [{ ...buoi, attendeeIds: ['nguoi-la-1', 'nguoi-la-2'] }],
-      expenses: [],
     });
     expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(200000);
   });
 
-  it('khoản chi cũng bỏ qua id lạ mà không thất thoát', () => {
-    const out = calculateSettlement({
-      members,
-      dailySessions: [],
-      expenses: [
-        {
-          id: 'e1',
-          title: 'Nước',
-          category: 'drink',
-          amount: 90000,
-          paidById: 'a',
-          splitType: 'custom',
-          participantIds: ['a', 'nguoi-la-1'],
-        },
-      ],
-    });
-    expect(out.rows.reduce((s, r) => s + r.expenseShare, 0)).toBe(90000);
-    expect(out.rows.find((r) => r.memberId === 'a')!.expenseShare).toBe(90000);
-  });
 });

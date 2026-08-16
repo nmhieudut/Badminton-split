@@ -8,7 +8,6 @@ export type MonthData = NonNullable<Awaited<ReturnType<typeof getMonthData>>>;
 
 export type ViewMember = MonthData['members'][number];
 export type ViewDailySession = MonthData['dailySessions'][number];
-export type ViewExpense = MonthData['expenses'][number];
 export type ViewSettlement = MonthData['settlement'];
 export type ViewSettlementRow = ViewSettlement['rows'][number];
 export type ViewTransfer = ViewSettlement['transfers'][number];

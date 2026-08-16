@@ -49,7 +49,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const { rows, transfers, totalExpenses, totalCourtCost, totalShuttleCost } = settlement;
+  const { rows, transfers, totalCost, totalCourtCost, totalShuttleCost } = settlement;
 
   const completedTransfersCount = transfers.filter((t) => t.isSettled).length;
   const isAllSettled = transfers.length > 0 && completedTransfersCount === transfers.length;
@@ -85,9 +85,9 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
             <DollarSign className="h-4 w-4 text-indigo-600" />
           </div>
           <p className="mt-2 font-mono text-2xl font-black text-indigo-600">
-            {formatVND(totalExpenses)}
+            {formatVND(totalCost)}
           </p>
-          <p className="mt-1 text-xs text-slate-400">{sessionCount} buổi đánh + các khoản chi khác</p>
+          <p className="mt-1 text-xs text-slate-400">{sessionCount} buổi đánh trong kỳ</p>
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">

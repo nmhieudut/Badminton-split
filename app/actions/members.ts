@@ -5,8 +5,6 @@ import { revalidatePath } from 'next/cache';
 import { db } from '../../db';
 import {
   dailySessions,
-  expenseParticipants,
-  expenses,
   members,
   monthMembers,
   months,
@@ -103,24 +101,6 @@ export async function removeMemberFromMonth(monthKey: string, memberId: string) 
         );
     }
 
-    // Tương tự với các khoản chi của kỳ này.
-    const expenseIds = (
-      await tx
-        .select({ id: expenses.id })
-        .from(expenses)
-        .where(eq(expenses.monthId, month.id))
-    ).map((r) => r.id);
-
-    if (expenseIds.length) {
-      await tx
-        .delete(expenseParticipants)
-        .where(
-          and(
-            inArray(expenseParticipants.expenseId, expenseIds),
-            eq(expenseParticipants.memberId, memberId)
-          )
-        );
-    }
   });
 
   revalidatePath(`/${monthKey}`, 'layout');

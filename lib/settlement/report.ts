@@ -20,7 +20,7 @@ export function generateZaloReport(args: ReportArgs): string {
   if (sessionCount > 0) {
     lines.push(`📅 Tổng số buổi đánh trong tháng: ${sessionCount} buổi`);
   }
-  lines.push(`💰 Tổng chi phí kỳ này: ${formatVND(settlement.totalExpenses)}`);
+  lines.push(`💰 Tổng chi phí kỳ này: ${formatVND(settlement.totalCost)}`);
   lines.push('');
 
   lines.push('📊 ĐỐI SOÁT THEO SỐ BUỔI CÓ MẶT CỦA TỪNG NGƯỜI:');

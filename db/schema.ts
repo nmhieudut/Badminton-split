@@ -83,39 +83,6 @@ export const sessionAttendees = pgTable(
   (t) => [primaryKey({ columns: [t.sessionId, t.memberId] })]
 );
 
-export const expenses = pgTable(
-  'expenses',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    monthId: uuid('month_id')
-      .notNull()
-      .references(() => months.id, { onDelete: 'cascade' }),
-    title: text('title').notNull(),
-    category: text('category').notNull(),
-    amount: bigint('amount', { mode: 'number' }).notNull(),
-    paidById: uuid('paid_by_id')
-      .notNull()
-      .references(() => members.id),
-    splitType: text('split_type').notNull(),
-    date: date('date').notNull(),
-    note: text('note'),
-  },
-  (t) => [index('expenses_month_date_idx').on(t.monthId, t.date)]
-);
-
-export const expenseParticipants = pgTable(
-  'expense_participants',
-  {
-    expenseId: uuid('expense_id')
-      .notNull()
-      .references(() => expenses.id, { onDelete: 'cascade' }),
-    memberId: uuid('member_id')
-      .notNull()
-      .references(() => members.id, { onDelete: 'cascade' }),
-  },
-  (t) => [primaryKey({ columns: [t.expenseId, t.memberId] })]
-);
-
 export const settledTransfers = pgTable(
   'settled_transfers',
   {

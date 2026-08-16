@@ -17,7 +17,7 @@ import type {
 export const NGUONG_BO_QUA = 500;
 
 export function calculateSettlement(input: SettlementInput): SettlementOutput {
-  const { members, dailySessions, expenses } = input;
+  const { members, dailySessions } = input;
 
   const memberIds = new Set(members.map((m) => m.id));
 
@@ -38,14 +38,13 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
   const courtShare = zero();
   const shuttleShare = zero();
   const drinkShare = zero();
-  const expenseShare = zero();
 
   const add = (map: Map<string, number>, id: string | null, amount: number) => {
     if (!id || !map.has(id)) return;
     map.set(id, map.get(id)! + amount);
   };
 
-  let totalExpenses = 0;
+  let totalCost = 0;
   let totalCourtCost = 0;
   let totalShuttleCost = 0;
   let totalOtherCost = 0;
@@ -57,7 +56,7 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     totalCourtCost += s.courtFee;
     totalShuttleCost += shuttleFee;
     totalOtherCost += s.drinkFee + s.otherFee;
-    totalExpenses += s.courtFee + shuttleFee + s.drinkFee + s.otherFee;
+    totalCost += s.courtFee + shuttleFee + s.drinkFee + s.otherFee;
 
     add(paid, s.courtPayerId, s.courtFee);
     add(paid, s.shuttlecockPayerId, shuttleFee);
@@ -87,21 +86,6 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     }
   }
 
-  for (const e of expenses) {
-    totalExpenses += e.amount;
-    add(paid, e.paidById, e.amount);
-
-    const thamGia = chiGiuNguoiTrongKy(e.participantIds);
-    const participants =
-      e.splitType === 'all' || thamGia.length === 0 ? members.map((m) => m.id) : thamGia;
-    if (participants.length === 0) continue;
-
-    const parts = allocate(e.amount, participants);
-    for (const id of participants) {
-      add(expenseShare, id, parts.get(id) ?? 0);
-      add(share, id, parts.get(id) ?? 0);
-    }
-  }
 
   const rows: SettlementRow[] = members.map((m) => ({
     memberId: m.id,
@@ -113,13 +97,12 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     courtShare: courtShare.get(m.id) ?? 0,
     shuttleShare: shuttleShare.get(m.id) ?? 0,
     drinkShare: drinkShare.get(m.id) ?? 0,
-    expenseShare: expenseShare.get(m.id) ?? 0,
   }));
 
   return {
     rows,
     transfers: buildTransfers(rows),
-    totalExpenses,
+    totalCost,
     totalCourtCost,
     totalShuttleCost,
     totalOtherCost,

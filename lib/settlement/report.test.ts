@@ -26,7 +26,7 @@ const dailySessions = [
 ];
 
 function report() {
-  const settlement = calculateSettlement({ members, dailySessions, expenses: [] });
+  const settlement = calculateSettlement({ members, dailySessions });
   return generateZaloReport({
     title: 'Tháng 08/2026',
     monthKey: '2026-08',
@@ -53,7 +53,7 @@ describe('generateZaloReport', () => {
   });
 
   it('báo đã cân bằng khi không còn ai nợ ai', () => {
-    const settlement = calculateSettlement({ members, dailySessions: [], expenses: [] });
+    const settlement = calculateSettlement({ members, dailySessions: [] });
     const text = generateZaloReport({
       title: 'Tháng 08/2026',
       monthKey: '2026-08',
@@ -75,16 +75,21 @@ describe('ngưỡng bỏ qua tiền lẻ dùng chung', () => {
         { id: 'a', name: 'An' },
         { id: 'b', name: 'Bình' },
       ],
-      dailySessions: [],
-      expenses: [
+      dailySessions: [
         {
-          id: 'e1',
-          title: 'Lẻ',
-          category: 'other',
-          amount: 600,
-          paidById: 'a',
-          splitType: 'all',
-          participantIds: [],
+          id: 'ds-le',
+          date: '2026-08-04',
+          courtFee: 600,
+          courtPayerId: 'a',
+          shuttlecockCount: 0,
+          shuttlecockPricePerItem: 0,
+          shuttlecockTotalFee: null,
+          shuttlecockPayerId: 'a',
+          drinkFee: 0,
+          drinkPayerId: null,
+          otherFee: 0,
+          otherFeePayerId: null,
+          attendeeIds: ['a', 'b'],
         },
       ],
     });

@@ -2,8 +2,6 @@ import { and, asc, desc, eq, inArray, lt } from 'drizzle-orm';
 import { db } from './index';
 import {
   dailySessions,
-  expenseParticipants,
-  expenses,
   members,
   monthMembers,
   months,
@@ -11,7 +9,6 @@ import {
   settledTransfers,
 } from './schema';
 import { calculateSettlement } from '../lib/settlement/calculate';
-import type { ExpenseCategory } from '../lib/settlement/types';
 
 export async function listMonthKeys(): Promise<string[]> {
   const rows = await db
@@ -58,19 +55,7 @@ export async function getMonthData(monthKey: string) {
         .where(inArray(sessionAttendees.sessionId, sessionIds))
     : [];
 
-  const expenseRows = await db
-    .select()
-    .from(expenses)
-    .where(eq(expenses.monthId, month.id))
-    .orderBy(desc(expenses.date));
 
-  const expenseIds = expenseRows.map((e) => e.id);
-  const participantRows = expenseIds.length
-    ? await db
-        .select()
-        .from(expenseParticipants)
-        .where(inArray(expenseParticipants.expenseId, expenseIds))
-    : [];
 
   const settledRows = await db
     .select()
@@ -82,21 +67,12 @@ export async function getMonthData(monthKey: string) {
     (r) => r.sessionId,
     (r) => r.memberId
   );
-  const participantsByExpense = groupBy(
-    participantRows,
-    (r) => r.expenseId,
-    (r) => r.memberId
-  );
 
   const sessionsWithAttendees = sessionRows.map((s) => ({
     ...s,
     attendeeIds: attendeesBySession.get(s.id) ?? [],
   }));
 
-  const expensesWithParticipants = expenseRows.map((e) => ({
-    ...e,
-    participantIds: participantsByExpense.get(e.id) ?? [],
-  }));
 
   const settlement = calculateSettlement({
     members: memberRows.map((m) => ({ id: m.id, name: m.name })),
@@ -115,15 +91,6 @@ export async function getMonthData(monthKey: string) {
       otherFeePayerId: s.otherFeePayerId,
       attendeeIds: s.attendeeIds,
     })),
-    expenses: expensesWithParticipants.map((e) => ({
-      id: e.id,
-      title: e.title,
-      category: e.category as ExpenseCategory,
-      amount: e.amount,
-      paidById: e.paidById,
-      splitType: e.splitType as 'all' | 'custom',
-      participantIds: e.participantIds,
-    })),
   });
 
   const settledKeys = new Set(settledRows.map((r) => `${r.fromMemberId}::${r.toMemberId}`));
@@ -132,7 +99,6 @@ export async function getMonthData(monthKey: string) {
     month,
     members: memberRows,
     dailySessions: sessionsWithAttendees,
-    expenses: expensesWithParticipants,
     settlement: {
       ...settlement,
       transfers: settlement.transfers.map((t) => ({
