@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
-import { getMonthData, listMonthKeys } from '../../db/queries';
+import { getMonthData, listAdmins, listMonthKeys } from '../../db/queries';
 import { Navbar } from '../../components/Navbar';
 import { getSessionUser, getVaiTro } from '../../lib/auth/session';
+import type { DongAdmin } from '../../components/AdminsModal';
 
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -22,6 +23,25 @@ export default async function MonthLayout({
 
   const [user, vaiTro] = await Promise.all([getSessionUser(), getVaiTro()]);
   const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
+  const isSuperAdmin = vaiTro === 'super_admin';
+
+  // Chỉ truy vấn khi thật sự cần: khách và admin thường không thấy màn hình này.
+  // Ngày định dạng ngay ở server để trình duyệt khác múi giờ không hiện lệch.
+  const danhSachAdmin: DongAdmin[] = isSuperAdmin
+    ? [
+        ...(process.env.ADMIN_EMAILS ?? '')
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean)
+          .map((email) => ({ email, addedAt: '', addedBy: null, laSuperAdmin: true })),
+        ...(await listAdmins()).map((a) => ({
+          email: a.email,
+          addedAt: a.addedAt.toLocaleDateString('vi-VN'),
+          addedBy: a.addedBy,
+          laSuperAdmin: false,
+        })),
+      ]
+    : [];
   const unsettledCount = data.settlement.transfers.filter((t) => !t.isSettled).length;
 
   return (
@@ -34,7 +54,8 @@ export default async function MonthLayout({
         unsettledCount={unsettledCount}
         email={user?.email ?? null}
         isAdmin={isAdmin}
-        isSuperAdmin={vaiTro === 'super_admin'}
+        isSuperAdmin={isSuperAdmin}
+        danhSachAdmin={danhSachAdmin}
       />
 
       {/*

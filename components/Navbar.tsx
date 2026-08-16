@@ -12,10 +12,12 @@ import {
   Edit3,
   HandCoins,
   MoreVertical,
+  ShieldCheck,
   Users,
 } from 'lucide-react';
 import type { ViewMonth } from '../lib/view-types';
 import { AuthButton } from './AuthButton';
+import { AdminsModal, type DongAdmin } from './AdminsModal';
 import { YearMonthPickerModal } from './YearMonthPickerModal';
 import { EditMonthModal } from './EditMonthModal';
 import { BadmintonEstimatorModal } from './BadmintonEstimatorModal';
@@ -33,6 +35,8 @@ interface NavbarProps {
   isAdmin: boolean;
   /** Chỉ điều khiển đúng một thứ: mục quản lý quyền trong menu tiện ích. */
   isSuperAdmin: boolean;
+  /** Danh sách admin — chỉ nạp khi người xem là super admin, ngược lại rỗng. */
+  danhSachAdmin: DongAdmin[];
 }
 
 /** Dịch monthKey đi `delta` tháng, giữ định dạng `YYYY-MM`. */
@@ -55,12 +59,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   email,
   isAdmin,
   isSuperAdmin,
+  danhSachAdmin,
 }) => {
   const pathname = usePathname();
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
+  const [isAdminsOpen, setIsAdminsOpen] = useState(false);
 
   const base = `/${monthKey}`;
 
@@ -203,6 +209,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <Calculator className="h-4 w-4 text-amber-500" />
                     <span>Dự toán kỳ tới</span>
                   </button>
+
+                  {isSuperAdmin && (
+                    <>
+                      <div className="my-1 border-t border-slate-100" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsToolsOpen(false);
+                          setIsAdminsOpen(true);
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                      >
+                        <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                        <span>Quản lý quyền</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -269,6 +292,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           canDelete={monthKeys.length > 1}
           onClose={() => setIsEditOpen(false)}
         />
+      )}
+
+      {isAdminsOpen && (
+        <AdminsModal danhSach={danhSachAdmin} onClose={() => setIsAdminsOpen(false)} />
       )}
 
       {isEstimatorOpen && (
