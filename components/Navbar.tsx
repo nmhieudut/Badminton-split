@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
@@ -31,6 +31,10 @@ interface NavbarProps {
   unsettledCount: number;
   /** Email người đang đăng nhập, null nếu là khách. */
   email: string | null;
+  /** Tên hiển thị từ Google, có thể trống. */
+  ten: string | null;
+  /** Ảnh đại diện Google, có thể trống. */
+  anhDaiDien: string | null;
   /** Đúng với cả admin lẫn super admin — điều khiển mọi nút nghiệp vụ. */
   isAdmin: boolean;
   /** Chỉ điều khiển đúng một thứ: mục quản lý quyền trong menu tiện ích. */
@@ -57,6 +61,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   memberCount,
   unsettledCount,
   email,
+  ten,
+  anhDaiDien,
   isAdmin,
   isSuperAdmin,
   danhSachAdmin,
@@ -67,6 +73,33 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
   const [isAdminsOpen, setIsAdminsOpen] = useState(false);
+  const bocTienIch = useRef<HTMLDivElement>(null);
+
+  /*
+    Đóng menu bằng listener trên document thay vì lớp phủ `fixed inset-0`.
+    Header có backdrop-blur, mà backdrop-filter tạo containing block cho con
+    cháu position:fixed — lớp phủ như vậy chỉ trùm đúng cái header, nên bấm
+    vào nội dung trang sẽ không đóng được menu.
+  */
+  useEffect(() => {
+    if (!isToolsOpen) return;
+
+    const ngoai = (e: MouseEvent) => {
+      if (bocTienIch.current && !bocTienIch.current.contains(e.target as Node)) {
+        setIsToolsOpen(false);
+      }
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsToolsOpen(false);
+    };
+
+    document.addEventListener('mousedown', ngoai);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', ngoai);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [isToolsOpen]);
 
   const base = `/${monthKey}`;
 
@@ -167,10 +200,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            <AuthButton email={email} isAdmin={isAdmin} />
+            <AuthButton
+              email={email}
+              ten={ten}
+              anhDaiDien={anhDaiDien}
+              isAdmin={isAdmin}
+              isSuperAdmin={isSuperAdmin}
+            />
 
           {/* Tiện ích */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0" ref={bocTienIch}>
             <button
               type="button"
               id="nav-tools-menu-btn"
@@ -183,9 +222,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {isToolsOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsToolsOpen(false)} />
-                <div className="absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 text-sm shadow-xl">
+              <div className="absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 text-sm shadow-xl">
                   <button
                     type="button"
                     onClick={() => {
@@ -226,8 +263,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </button>
                     </>
                   )}
-                </div>
-              </>
+              </div>
             )}
           </div>
           </div>

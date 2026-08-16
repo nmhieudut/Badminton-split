@@ -6,19 +6,37 @@ import { laEmailAdmin } from './admin-emails';
 
 export type VaiTro = 'super_admin' | 'admin' | null;
 
+export interface NguoiDung {
+  email: string | null;
+  /** Tên hiển thị từ Google; có thể trống nếu tài khoản không đặt tên. */
+  ten: string | null;
+  /** Ảnh đại diện Google, dùng thẳng trong thẻ img. */
+  anhDaiDien: string | null;
+}
+
 /**
  * Người đang đăng nhập, hoặc null nếu là khách.
  *
  * Dùng getUser() chứ không phải getSession(): getUser() hỏi lại máy chủ auth
  * để xác thực token, còn getSession() chỉ đọc cookie nên có thể bị giả mạo.
  */
-export async function getSessionUser(): Promise<{ email: string | null } | null> {
+export async function getSessionUser(): Promise<NguoiDung | null> {
   const supabase = await taoServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return user ? { email: user.email ?? null } : null;
+  if (!user) return null;
+
+  // Google đặt tên và ảnh ở user_metadata, khóa khác nhau tùy provider.
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const chuoi = (k: string) => (typeof meta[k] === 'string' ? (meta[k] as string) : null);
+
+  return {
+    email: user.email ?? null,
+    ten: chuoi('full_name') ?? chuoi('name'),
+    anhDaiDien: chuoi('avatar_url') ?? chuoi('picture'),
+  };
 }
 
 /**

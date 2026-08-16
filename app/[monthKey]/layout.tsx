@@ -53,6 +53,8 @@ export default async function MonthLayout({
         memberCount={data.members.length}
         unsettledCount={unsettledCount}
         email={user?.email ?? null}
+        ten={user?.ten ?? null}
+        anhDaiDien={user?.anhDaiDien ?? null}
         isAdmin={isAdmin}
         isSuperAdmin={isSuperAdmin}
         danhSachAdmin={danhSachAdmin}
