@@ -1,16 +1,33 @@
 'use client';
 
-import React, { useTransition } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { signInWithGoogle } from '../app/actions/auth';
 
 export function LoginModal({ next, onClose }: { next: string; onClose: () => void }) {
   const [dangChay, startTransition] = useTransition();
+  const [daGanVaoDom, setDaGanVaoDom] = useState(false);
 
-  return (
+  useEffect(() => setDaGanVaoDom(true), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (!daGanVaoDom) return null;
+
+  const noiDung = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="login-modal-title"
     >
       <div
         className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
@@ -18,7 +35,9 @@ export function LoginModal({ next, onClose }: { next: string; onClose: () => voi
       >
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Đăng nhập</h2>
+            <h2 id="login-modal-title" className="text-base font-bold text-slate-900">
+              Đăng nhập
+            </h2>
             <p className="mt-1 text-xs text-slate-500">
               Chỉ người quản lý mới cần đăng nhập để ghi dữ liệu. Xem thì không cần.
             </p>
@@ -44,4 +63,14 @@ export function LoginModal({ next, onClose }: { next: string; onClose: () => voi
       </div>
     </div>
   );
+
+  /*
+    Đưa thẳng ra document.body.
+
+    Modal này được mở từ nút nằm trong <header>, mà header có backdrop-blur.
+    `backdrop-filter` tạo containing block mới cho con cháu position:fixed, nên
+    `inset-0` sẽ tính theo header cao vài chục pixel thay vì theo cửa sổ — modal
+    bị căn giữa trong header rồi tràn lên trên và mất phần tiêu đề.
+  */
+  return createPortal(noiDung, document.body);
 }
