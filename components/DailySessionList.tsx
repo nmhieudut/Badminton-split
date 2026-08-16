@@ -205,7 +205,16 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                 key={session.id}
                 className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-indigo-300 hover:shadow-md transition-all"
               >
-                <div>
+                {/*
+                  Bấm vào thân thẻ để mở buổi đánh. Admin ra form sửa, người
+                  khác ra màn hình xem chi tiết — nhánh do DailySessionsTab lo.
+                  Không có chỗ bấm này thì khách chỉ thấy được phần tóm tắt,
+                  vì hàng nút bên dưới đã bị ẩn.
+                */}
+                <div
+                  onClick={() => onEditSession(session)}
+                  className="cursor-pointer"
+                >
                   {/* Top Bar: Date + Court + Total */}
                   <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-3">

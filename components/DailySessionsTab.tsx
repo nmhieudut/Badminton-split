@@ -11,6 +11,7 @@ import type { DailySessionInput } from '../app/actions/daily-sessions';
 import { deleteDailySession, saveDailySession } from '../app/actions/daily-sessions';
 import { DailySessionList } from './DailySessionList';
 import { DailySessionModal } from './DailySessionModal';
+import { SessionDetailModal } from './SessionDetailModal';
 
 interface DailySessionsTabProps {
   monthKey: string;
@@ -45,6 +46,8 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
   isAdmin,
 }) => {
   const [modal, setModal] = useState<ModalState | null>(null);
+  // Người không sửa được vẫn phải xem được buổi đánh gồm những gì.
+  const [xemChiTiet, setXemChiTiet] = useState<ViewDailySession | null>(null);
 
   const handleSave = async (input: DailySessionInput) => {
     // Nhân bản luôn ghi thành buổi mới, dù form được điền từ một buổi đã có.
@@ -68,7 +71,9 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
         settlementRows={settlementRows}
         isAdmin={isAdmin}
         onAddSession={(dateStr) => setModal({ mode: 'create', session: null, defaultDate: dateStr })}
-        onEditSession={(session) => setModal({ mode: 'edit', session })}
+        onEditSession={(session) =>
+          isAdmin ? setModal({ mode: 'edit', session }) : setXemChiTiet(session)
+        }
         onDeleteSession={(sessionId) => {
           void handleDelete(sessionId);
         }}
@@ -84,6 +89,13 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
           defaultDate={modal.mode === 'create' ? modal.defaultDate : undefined}
           onSave={handleSave}
           onClose={() => setModal(null)}
+        />
+      )}
+      {xemChiTiet && (
+        <SessionDetailModal
+          session={xemChiTiet}
+          members={members}
+          onClose={() => setXemChiTiet(null)}
         />
       )}
     </>

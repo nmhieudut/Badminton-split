@@ -255,9 +255,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           onClick={(e) => e.stopPropagation()}
                           className="group/item relative rounded-xl border border-indigo-200/70 bg-white p-1.5 shadow-2xs hover:border-indigo-400 hover:shadow-xs transition-all"
                         >
+                          {/*
+                            Ai cũng bấm được vào buổi đánh. Admin thì mở form
+                            sửa, người khác mở màn hình xem chi tiết — việc
+                            phân nhánh do DailySessionsTab lo.
+                          */}
                           <div
-                            onClick={isAdmin ? () => onEditSession(s) : undefined}
-                            className={isAdmin ? 'cursor-pointer' : undefined}
+                            onClick={() => onEditSession(s)}
+                            className="cursor-pointer"
                           >
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-bold text-[11px] text-slate-900 truncate max-w-[80px] sm:max-w-[100px]">
