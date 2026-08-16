@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { ViewMonth } from '../lib/view-types';
 import { AuthButton } from './AuthButton';
-import { AdminsModal, type DongAdmin } from './AdminsModal';
+import { AdminsModal, type DongNguoiDung } from './AdminsModal';
 import { CourtsModal, type DongSan } from './CourtsModal';
 import { YearMonthPickerModal } from './YearMonthPickerModal';
 import { EditMonthModal } from './EditMonthModal';
@@ -43,7 +43,7 @@ interface NavbarProps {
   /** Chỉ điều khiển đúng một thứ: mục quản lý quyền trong menu tiện ích. */
   isSuperAdmin: boolean;
   /** Danh sách admin — chỉ nạp khi người xem là super admin, ngược lại rỗng. */
-  danhSachAdmin: DongAdmin[];
+  danhSachAdmin: DongNguoiDung[];
   /** Danh sách sân — chỉ nạp cho admin, ngược lại rỗng. */
   danhSachSan: DongSan[];
 }

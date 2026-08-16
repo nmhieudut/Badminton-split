@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { getMonthData, listAdmins, listCourts, listMonthKeys } from '../../db/queries';
 import { Navbar } from '../../components/Navbar';
 import { getSessionUser, getVaiTro } from '../../lib/auth/session';
-import type { DongAdmin } from '../../components/AdminsModal';
+import type { DongNguoiDung, VaiTroDong } from '../../components/AdminsModal';
+import { listAuthUsers } from '../../lib/auth/users';
 import type { DongSan } from '../../components/CourtsModal';
 import { EmptyMonth } from '../../components/EmptyMonth';
 
@@ -27,21 +28,52 @@ export default async function MonthLayout({
 
   // Chỉ truy vấn khi thật sự cần: khách và admin thường không thấy màn hình này.
   // Ngày định dạng ngay ở server để trình duyệt khác múi giờ không hiện lệch.
-  const danhSachAdmin: DongAdmin[] = isSuperAdmin
-    ? [
-        ...(process.env.ADMIN_EMAILS ?? '')
-          .split(',')
-          .map((e) => e.trim().toLowerCase())
-          .filter(Boolean)
-          .map((email) => ({ email, addedAt: '', addedBy: null, laSuperAdmin: true })),
-        ...(await listAdmins()).map((a) => ({
-          email: a.email,
-          addedAt: a.addedAt.toLocaleDateString('vi-VN'),
-          addedBy: a.addedBy,
-          laSuperAdmin: false,
-        })),
-      ]
-    : [];
+  /*
+    Danh sách cho màn hình quản lý quyền: gộp ba nguồn để không sót ai.
+      - ADMIN_EMAILS  → super admin, không đổi được từ giao diện
+      - bảng admins   → người đã được cấp quyền
+      - auth.users    → mọi người đã từng đăng nhập
+    Người được cấp quyền trước khi kịp đăng nhập vẫn phải hiện ra, kèm ghi chú,
+    nếu không super admin sẽ tưởng thao tác cấp quyền của mình không ăn.
+  */
+  let danhSachNguoiDung: DongNguoiDung[] = [];
+
+  if (isSuperAdmin) {
+    const superEmails = new Set(
+      (process.env.ADMIN_EMAILS ?? '')
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const adminEmails = new Set((await listAdmins()).map((a) => a.email));
+    const taiKhoan = await listAuthUsers();
+    const daBiet = new Map(taiKhoan.map((u) => [u.email, u]));
+
+    const vaiTroCua = (email: string): VaiTroDong =>
+      superEmails.has(email) ? 'super_admin' : adminEmails.has(email) ? 'admin' : 'chi_xem';
+
+    const moiEmail = new Set([...superEmails, ...adminEmails, ...daBiet.keys()]);
+
+    danhSachNguoiDung = [...moiEmail]
+      .map((email) => {
+        const u = daBiet.get(email);
+        return {
+          email,
+          ten: u?.ten ?? null,
+          anhDaiDien: u?.anhDaiDien ?? null,
+          vaiTro: vaiTroCua(email),
+          lanCuoi: u?.lanCuoi ?? null,
+        };
+      })
+      // Người có quyền lên trước, rồi tới người chỉ xem.
+      .sort((a, b) => {
+        const hang = { super_admin: 0, admin: 1, chi_xem: 2 } as const;
+        return (
+          hang[a.vaiTro] - hang[b.vaiTro] ||
+          (a.ten ?? a.email).localeCompare(b.ten ?? b.email, 'vi')
+        );
+      });
+  }
 
   // Chỉ admin mới mở được màn hình quản lý sân, nên khách khỏi tốn truy vấn.
   const danhSachSan: DongSan[] = isAdmin ? await listCourts() : [];
@@ -62,7 +94,7 @@ export default async function MonthLayout({
         anhDaiDien={user?.anhDaiDien ?? null}
         isAdmin={isAdmin}
         isSuperAdmin={isSuperAdmin}
-        danhSachAdmin={danhSachAdmin}
+        danhSachAdmin={danhSachNguoiDung}
         danhSachSan={danhSachSan}
       />
 
