@@ -20,11 +20,14 @@ import { toggleTransferSettled } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import { NGUONG_BO_QUA } from '../lib/settlement/calculate';
 import type { ViewMonth, ViewSettlement, ViewTransfer } from '../lib/view-types';
+import { MySettlement } from './MySettlement';
 import { ZaloReportModal } from './ZaloReportModal';
 
 interface SettlementViewProps {
   monthKey: string;
   month: ViewMonth;
+  /** Thành viên đang dùng máy này, đọc từ cookie ở server. */
+  meId: string | null;
   /** Đã được tính trọn vẹn ở server — component này chỉ hiển thị. */
   settlement: ViewSettlement;
   sessionCount: number;
@@ -39,6 +42,7 @@ const transferKey = (t: ViewTransfer) => `${t.fromMemberId}::${t.toMemberId}`;
 export const SettlementView: React.FC<SettlementViewProps> = ({
   monthKey,
   month,
+  meId,
   settlement,
   sessionCount,
   qrUrls,
@@ -77,6 +81,19 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
 
   return (
     <div id="settlement-view-container" className="space-y-8">
+      {/*
+        Việc của người đang cầm máy, đặt trên cùng. Bảng của cả nhóm nằm bên
+        dưới cho ai muốn đối chiếu — nhưng phần lớn người vào đây chỉ cần biết
+        mình phải chuyển cho ai.
+      */}
+      <MySettlement
+        monthKey={monthKey}
+        initialMeId={meId}
+        rows={rows}
+        transfers={transfers}
+        qrUrls={qrUrls}
+      />
+
       {/* Tổng quan các con số của tháng */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
