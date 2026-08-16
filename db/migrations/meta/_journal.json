@@ -22,6 +22,20 @@
       "when": 1786888034887,
       "tag": "0002_remove_expenses",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786892681820,
+      "tag": "0003_moaning_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786892695709,
+      "tag": "0004_enable_rls_on_admins",
+      "breakpoints": true
     }
   ]
 }

@@ -99,3 +99,16 @@ export const settledTransfers = pgTable(
   },
   (t) => [primaryKey({ columns: [t.monthId, t.fromMemberId, t.toMemberId] })]
 );
+
+/**
+ * Admin do super admin thêm vào. Super admin thì đến từ biến môi trường
+ * ADMIN_EMAILS, không nằm ở đây — quyền cao nhất không được sửa qua giao diện.
+ *
+ * Email làm khóa chính vì đó chính là thứ Google trả về và là thứ ta so khớp.
+ * Luôn lưu dạng chữ thường, chuẩn hóa ngay lúc ghi.
+ */
+export const admins = pgTable('admins', {
+  email: text('email').primaryKey(),
+  addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
+  addedBy: text('added_by'),
+});

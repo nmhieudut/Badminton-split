@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, lt } from 'drizzle-orm';
 import { db } from './index';
 import {
+  admins,
   dailySessions,
   members,
   monthMembers,
@@ -177,4 +178,16 @@ function groupBy<T, K, V>(rows: T[], key: (r: T) => K, value: (r: T) => V): Map<
     else map.set(k, [value(row)]);
   }
   return map;
+}
+
+/** Danh sách admin do super admin thêm. Super admin không nằm trong bảng này. */
+export async function listAdmins() {
+  return db
+    .select({
+      email: admins.email,
+      addedAt: admins.addedAt,
+      addedBy: admins.addedBy,
+    })
+    .from(admins)
+    .orderBy(asc(admins.email));
 }

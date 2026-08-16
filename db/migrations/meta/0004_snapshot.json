@@ -1,0 +1,579 @@
+{
+  "id": "436c0a4c-ad30-493d-a8e5-56ce5910cc39",
+  "prevId": "073e5114-5af3-41f3-8262-c17153065e14",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.admins": {
+      "name": "admins",
+      "schema": "",
+      "columns": {
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "added_at": {
+          "name": "added_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "added_by": {
+          "name": "added_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_sessions": {
+      "name": "daily_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "court_name": {
+          "name": "court_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "court_fee": {
+          "name": "court_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "court_payer_id": {
+          "name": "court_payer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shuttlecock_count": {
+          "name": "shuttlecock_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "shuttlecock_price_per_item": {
+          "name": "shuttlecock_price_per_item",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "shuttlecock_total_fee": {
+          "name": "shuttlecock_total_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shuttlecock_payer_id": {
+          "name": "shuttlecock_payer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "drink_fee": {
+          "name": "drink_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "drink_payer_id": {
+          "name": "drink_payer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_fee": {
+          "name": "other_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "other_fee_payer_id": {
+          "name": "other_fee_payer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "daily_sessions_month_date_idx": {
+          "name": "daily_sessions_month_date_idx",
+          "columns": [
+            {
+              "expression": "month_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "daily_sessions_month_id_months_id_fk": {
+          "name": "daily_sessions_month_id_months_id_fk",
+          "tableFrom": "daily_sessions",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "tableTo": "months",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "daily_sessions_court_payer_id_members_id_fk": {
+          "name": "daily_sessions_court_payer_id_members_id_fk",
+          "tableFrom": "daily_sessions",
+          "columnsFrom": [
+            "court_payer_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "daily_sessions_shuttlecock_payer_id_members_id_fk": {
+          "name": "daily_sessions_shuttlecock_payer_id_members_id_fk",
+          "tableFrom": "daily_sessions",
+          "columnsFrom": [
+            "shuttlecock_payer_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "daily_sessions_drink_payer_id_members_id_fk": {
+          "name": "daily_sessions_drink_payer_id_members_id_fk",
+          "tableFrom": "daily_sessions",
+          "columnsFrom": [
+            "drink_payer_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "daily_sessions_other_fee_payer_id_members_id_fk": {
+          "name": "daily_sessions_other_fee_payer_id_members_id_fk",
+          "tableFrom": "daily_sessions",
+          "columnsFrom": [
+            "other_fee_payer_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.members": {
+      "name": "members",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qr_image_path": {
+          "name": "qr_image_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_permanent": {
+          "name": "is_permanent",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.month_members": {
+      "name": "month_members",
+      "schema": "",
+      "columns": {
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "member_id": {
+          "name": "member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "month_members_month_id_months_id_fk": {
+          "name": "month_members_month_id_months_id_fk",
+          "tableFrom": "month_members",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "tableTo": "months",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "month_members_member_id_members_id_fk": {
+          "name": "month_members_member_id_members_id_fk",
+          "tableFrom": "month_members",
+          "columnsFrom": [
+            "member_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "month_members_month_id_member_id_pk": {
+          "name": "month_members_month_id_member_id_pk",
+          "columns": [
+            "month_id",
+            "member_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.months": {
+      "name": "months",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "month_key": {
+          "name": "month_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "initial_fund": {
+          "name": "initial_fund",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "months_month_key_unique": {
+          "name": "months_month_key_unique",
+          "columns": [
+            "month_key"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.session_attendees": {
+      "name": "session_attendees",
+      "schema": "",
+      "columns": {
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "member_id": {
+          "name": "member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "session_attendees_session_id_daily_sessions_id_fk": {
+          "name": "session_attendees_session_id_daily_sessions_id_fk",
+          "tableFrom": "session_attendees",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "tableTo": "daily_sessions",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "session_attendees_member_id_members_id_fk": {
+          "name": "session_attendees_member_id_members_id_fk",
+          "tableFrom": "session_attendees",
+          "columnsFrom": [
+            "member_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "session_attendees_session_id_member_id_pk": {
+          "name": "session_attendees_session_id_member_id_pk",
+          "columns": [
+            "session_id",
+            "member_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.settled_transfers": {
+      "name": "settled_transfers",
+      "schema": "",
+      "columns": {
+        "month_id": {
+          "name": "month_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_member_id": {
+          "name": "from_member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to_member_id": {
+          "name": "to_member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "settled_transfers_month_id_months_id_fk": {
+          "name": "settled_transfers_month_id_months_id_fk",
+          "tableFrom": "settled_transfers",
+          "columnsFrom": [
+            "month_id"
+          ],
+          "tableTo": "months",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "settled_transfers_from_member_id_members_id_fk": {
+          "name": "settled_transfers_from_member_id_members_id_fk",
+          "tableFrom": "settled_transfers",
+          "columnsFrom": [
+            "from_member_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "settled_transfers_to_member_id_members_id_fk": {
+          "name": "settled_transfers_to_member_id_members_id_fk",
+          "tableFrom": "settled_transfers",
+          "columnsFrom": [
+            "to_member_id"
+          ],
+          "tableTo": "members",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "settled_transfers_month_id_from_member_id_to_member_id_pk": {
+          "name": "settled_transfers_month_id_from_member_id_to_member_id_pk",
+          "columns": [
+            "month_id",
+            "from_member_id",
+            "to_member_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
