@@ -30,6 +30,7 @@ export const MySettlement: React.FC<MySettlementProps> = ({
 }) => {
   const [meId, setMeId] = useState<string | null>(initialMeId);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [loi, setLoi] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const chon = (id: string) => {
@@ -45,9 +46,12 @@ export const MySettlement: React.FC<MySettlementProps> = ({
   const danhDau = (t: ViewTransfer) => {
     const key = `${t.fromMemberId}::${t.toMemberId}`;
     setPendingKey(key);
+    setLoi(null);
     startTransition(async () => {
       try {
         await toggleTransferSettled(monthKey, t.fromMemberId, t.toMemberId);
+      } catch (e) {
+        setLoi(e instanceof Error ? e.message : 'Không lưu được. Thử lại giúp.');
       } finally {
         setPendingKey(null);
       }
@@ -90,6 +94,9 @@ export const MySettlement: React.FC<MySettlementProps> = ({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {loi && (
+        <p className="bg-rose-50 px-5 py-2.5 text-xs font-semibold text-rose-700">{loi}</p>
+      )}
       <header className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">

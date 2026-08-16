@@ -54,6 +54,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
   const [showReport, setShowReport] = useState(false);
   const [openQrKey, setOpenQrKey] = useState<string | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [loi, setLoi] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const { rows, transfers, totalCost, totalCourtCost, totalShuttleCost } = settlement;
@@ -66,6 +67,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
     const willComplete = !t.isSettled && completedTransfersCount + 1 === transfers.length;
 
     setPendingKey(key);
+    setLoi(null);
     startTransition(async () => {
       try {
         await toggleTransferSettled(monthKey, t.fromMemberId, t.toMemberId);
@@ -76,6 +78,10 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
             // Không có canvas thì bỏ qua hiệu ứng.
           }
         }
+      } catch (e) {
+        // Không có nhánh này thì lỗi biến mất im lặng: người dùng bấm, không
+        // có gì xảy ra, và không biết vì sao.
+        setLoi(e instanceof Error ? e.message : 'Không lưu được. Thử lại giúp.');
       } finally {
         setPendingKey(null);
       }
@@ -84,20 +90,6 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
 
   return (
     <div id="settlement-view-container" className="space-y-8">
-      {/*
-        Việc của người đang cầm máy, đặt trên cùng. Bảng của cả nhóm nằm bên
-        dưới cho ai muốn đối chiếu — nhưng phần lớn người vào đây chỉ cần biết
-        mình phải chuyển cho ai.
-      */}
-      <MySettlement
-        monthKey={monthKey}
-        initialMeId={meId}
-        rows={rows}
-        transfers={transfers}
-        qrUrls={qrUrls}
-        isAdmin={isAdmin}
-      />
-
       {/* Tổng quan các con số của tháng */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
@@ -175,6 +167,12 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
           </button>
         </div>
 
+        {loi && (
+          <p className="border-b border-slate-100 bg-rose-50 px-6 py-2.5 text-xs font-semibold text-rose-700">
+            {loi}
+          </p>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -244,6 +242,20 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
           * Tiền thừa/thiếu được tính chuẩn dựa trên các buổi có mặt thực tế
         </div>
       </div>
+
+      {/*
+        Việc của người đang cầm máy, đặt ngay trên phần hướng dẫn chuyển tiền —
+        đó là chỗ nó thuộc về. Trước đây khối này nằm trên cùng, nên người chưa
+        chọn tên bị hỏi "Bạn là ai?" trước cả khi thấy bất kỳ con số nào.
+      */}
+      <MySettlement
+        monthKey={monthKey}
+        initialMeId={meId}
+        rows={rows}
+        transfers={transfers}
+        qrUrls={qrUrls}
+        isAdmin={isAdmin}
+      />
 
       {/* Sơ đồ chuyển khoản tối ưu */}
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-4">
