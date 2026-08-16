@@ -1,17 +1,17 @@
+'use client';
+
 import React, { useState } from 'react';
-import { X, Calculator, Plus, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
-import { formatVND } from '../utils/settlement';
+import { X, Calculator } from 'lucide-react';
+import { formatVND } from '../lib/money';
 
 interface BadmintonEstimatorModalProps {
   memberCount: number;
   onClose: () => void;
-  onApplyAsBudget?: (estimatedTotal: number) => void;
 }
 
 export const BadmintonEstimatorModal: React.FC<BadmintonEstimatorModalProps> = ({
   memberCount,
   onClose,
-  onApplyAsBudget,
 }) => {
   const [sessionsPerMonth, setSessionsPerMonth] = useState(12); // 3 sessions/week * 4 weeks
   const [hoursPerSession, setHoursPerSession] = useState(2);

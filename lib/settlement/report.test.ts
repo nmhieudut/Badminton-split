@@ -64,3 +64,43 @@ describe('generateZaloReport', () => {
     expect(text).toContain('đã thanh toán cân bằng');
   });
 });
+
+describe('ngưỡng bỏ qua tiền lẻ dùng chung', () => {
+  it('báo cáo và phép quyết toán nhất quán: dưới ngưỡng thì vừa không sinh giao dịch, vừa báo đã đủ', () => {
+    // Số dư 300 đồng: dưới NGUONG_BO_QUA nên không có giao dịch nào được
+    // sinh ra. Báo cáo phải nói "ĐÃ ĐỦ" chứ không được nói còn nợ, nếu không
+    // người đọc sẽ đi tìm một khoản chuyển khoản không tồn tại.
+    const settlement = calculateSettlement({
+      members: [
+        { id: 'a', name: 'An' },
+        { id: 'b', name: 'Bình' },
+      ],
+      dailySessions: [],
+      expenses: [
+        {
+          id: 'e1',
+          title: 'Lẻ',
+          category: 'other',
+          amount: 600,
+          paidById: 'a',
+          splitType: 'all',
+          participantIds: [],
+        },
+      ],
+    });
+
+    expect(settlement.transfers).toHaveLength(0);
+
+    const text = generateZaloReport({
+      title: 'Tháng 08/2026',
+      monthKey: '2026-08',
+      memberCount: 2,
+      sessionCount: 0,
+      settlement,
+    });
+
+    expect(text).not.toContain('CẦN ĐÓNG THÊM');
+    expect(text).not.toContain('ĐƯỢC NHẬN LẠI');
+    expect(text).toContain('ĐÃ ĐỦ');
+  });
+});

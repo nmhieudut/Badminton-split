@@ -1,7 +1,8 @@
+'use client';
+
 import React, { useState } from 'react';
 import {
   Search,
-  Filter,
   Plus,
   Trash2,
   Edit2,
@@ -11,17 +12,18 @@ import {
   Copy,
   ReceiptText,
 } from 'lucide-react';
-import { ExpenseCategory, ExpenseItem, Member, CATEGORY_CONFIG } from '../types';
-import { formatVND, getMemberColor } from '../utils/settlement';
+import { CATEGORY_CONFIG, type ExpenseCategory } from '../lib/categories';
+import { formatVND } from '../lib/money';
+import type { ViewExpense, ViewMember } from '../lib/view-types';
 import { ConfirmDialog } from './ConfirmDialog';
 
 interface ExpenseListProps {
-  expenses: ExpenseItem[];
-  members: Member[];
+  expenses: ViewExpense[];
+  members: ViewMember[];
   onAddExpense: () => void;
-  onEditExpense: (expense: ExpenseItem) => void;
+  onEditExpense: (expense: ViewExpense) => void;
   onDeleteExpense: (id: string) => void;
-  onDuplicateExpense: (expense: ExpenseItem) => void;
+  onDuplicateExpense: (expense: ViewExpense) => void;
 }
 
 export const ExpenseList: React.FC<ExpenseListProps> = ({
@@ -35,7 +37,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPayer, setSelectedPayer] = useState<string>('all');
-  const [expenseToDelete, setExpenseToDelete] = useState<ExpenseItem | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<ViewExpense | null>(null);
 
   const filteredExpenses = expenses.filter((item) => {
     const matchesSearch =
@@ -51,10 +53,6 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   const getPayerName = (id: string) => {
     const member = members.find((m) => m.id === id);
     return member ? member.name : 'Không rõ';
-  };
-
-  const getMemberIndex = (id: string) => {
-    return members.findIndex((m) => m.id === id);
   };
 
   const totalFilteredAmount = filteredExpenses.reduce((sum, item) => sum + item.amount, 0);
@@ -138,12 +136,11 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
       ) : (
         <div className="space-y-3">
           {filteredExpenses.map((item) => {
-            const catConf = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
+            const catConf = CATEGORY_CONFIG[item.category as ExpenseCategory] ?? CATEGORY_CONFIG.other;
             const payerName = getPayerName(item.paidById);
-            const participantCount =
-              item.splitType === 'all'
-                ? members.length
-                : item.participantIds?.length || members.length;
+            // Danh sách người tham gia được chốt lúc lưu, kể cả khi chia đều,
+            // nên luôn ưu tiên số đã lưu thay vì số thành viên hiện tại.
+            const participantCount = item.participantIds.length || members.length;
 
             return (
               <div
@@ -186,7 +183,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3 text-slate-400" />
                         {item.splitType === 'all' ? (
-                          <span className="text-slate-500">Cả nhóm ({members.length} người)</span>
+                          <span className="text-slate-500">Cả nhóm ({participantCount} người)</span>
                         ) : (
                           <span className="text-indigo-600 font-medium">
                             Chia {participantCount}/{members.length} người

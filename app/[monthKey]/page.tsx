@@ -15,6 +15,7 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
       members={data.members}
       sessions={data.dailySessions}
       defaults={defaults}
+      settlementRows={data.settlement.rows}
     />
   );
 }

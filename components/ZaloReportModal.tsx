@@ -1,21 +1,25 @@
+'use client';
+
 import React, { useState } from 'react';
-import { X, Copy, Check, MessageSquare, Send, Sparkles } from 'lucide-react';
-import { MonthSession } from '../types';
-import { generateZaloReport } from '../utils/settlement';
+import { X, Copy, Check, MessageSquare, Sparkles } from 'lucide-react';
 
 interface ZaloReportModalProps {
-  session: MonthSession;
+  /** Văn bản báo cáo đã được tạo sẵn ở server (lib/settlement/report.ts). */
+  report: string;
   onClose: () => void;
 }
 
-export const ZaloReportModal: React.FC<ZaloReportModalProps> = ({ session, onClose }) => {
+export const ZaloReportModal: React.FC<ZaloReportModalProps> = ({ report, onClose }) => {
   const [copied, setCopied] = useState(false);
-  const reportText = generateZaloReport(session);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(reportText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Trình duyệt chặn clipboard: văn bản vẫn hiển thị để người dùng tự bôi đen.
+    }
   };
 
   return (
@@ -36,11 +40,12 @@ export const ZaloReportModal: React.FC<ZaloReportModalProps> = ({ session, onClo
             <div>
               <h3 className="font-semibold text-lg">Báo Cáo Tổng Kết Chia Tiền</h3>
               <p className="text-xs text-slate-300">
-                Được định dạng sẵn văn bản, chi tiết tiền và số tài khoản nhận tiền
+                Được định dạng sẵn văn bản, chi tiết tiền của từng người
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
           >
@@ -50,46 +55,34 @@ export const ZaloReportModal: React.FC<ZaloReportModalProps> = ({ session, onClo
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div className="flex items-center justify-between rounded-2xl bg-indigo-50/60 p-3 text-xs text-indigo-900 border border-indigo-100">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-indigo-600 shrink-0" />
-              <span>Chỉ cần sao chép và dán trực tiếp vào nhóm Zalo, Messenger hoặc Telegram.</span>
-            </div>
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-indigo-700 transition-colors shrink-0"
-            >
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? 'Đã sao chép' : 'Sao chép'}
-            </button>
+          <div className="flex items-center gap-2 rounded-2xl bg-indigo-50/60 p-3 text-xs text-indigo-900 border border-indigo-100">
+            <Sparkles className="h-4 w-4 text-indigo-600 shrink-0" />
+            <span>Chỉ cần sao chép và dán trực tiếp vào nhóm Zalo, Messenger hoặc Telegram.</span>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-900 p-5 font-mono text-xs text-slate-100 whitespace-pre-wrap leading-relaxed shadow-inner max-h-[50vh] overflow-y-auto select-all">
-            {reportText}
+            {report}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center border-t border-slate-100 bg-slate-50 px-6 py-3">
-          <span className="text-xs text-slate-400">
-            Kỳ quyết toán: <strong className="text-slate-800">{session.title}</strong>
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
-            >
-              Đóng
-            </button>
-            <button
-              id="copy-zalo-modal-main-btn"
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-700 transition-colors shadow-sm"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Đã sao chép' : 'Sao chép văn bản'}
-            </button>
-          </div>
+        {/* Footer: một nút sao chép duy nhất */}
+        <div className="flex justify-end items-center gap-2 border-t border-slate-100 bg-slate-50 px-6 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+          >
+            Đóng
+          </button>
+          <button
+            type="button"
+            id="copy-zalo-modal-main-btn"
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? 'Đã sao chép' : 'Sao chép văn bản'}
+          </button>
         </div>
       </div>
     </div>

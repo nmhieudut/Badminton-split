@@ -1,27 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import {
-  X,
-  PlusCircle,
-  Check,
-  Calendar,
-  DollarSign,
-  Users,
-  Tag,
-  FileText,
-  UserCheck,
-  Sparkles,
-} from 'lucide-react';
-import { ExpenseCategory, ExpenseItem, Member, CATEGORY_CONFIG } from '../types';
-import { formatVND, parseVNDInput } from '../utils/settlement';
+'use client';
+
+import React, { useState } from 'react';
+import { X, PlusCircle, Check, Users, Sparkles, UserPlus, Loader2 } from 'lucide-react';
+import { CATEGORY_CONFIG, type ExpenseCategory } from '../lib/categories';
+import { formatVND, parseVNDInput } from '../lib/money';
+import type { ViewExpense, ViewMember } from '../lib/view-types';
+import type { ExpenseInput } from '../app/actions/expenses';
+import { createMember } from '../app/actions/members';
 
 interface ExpenseFormModalProps {
-  initialData?: ExpenseItem | null;
-  members: Member[];
-  onSave: (expense: ExpenseItem) => void;
+  monthKey: string;
+  members: ViewMember[];
+  initialData: ViewExpense | null;
+  onSave: (input: ExpenseInput) => Promise<void>;
   onClose: () => void;
 }
 
-const PRESET_EXPENSES: { title: string; category: ExpenseCategory; defaultAmount?: number }[] = [
+const PRESET_EXPENSES: { title: string; category: ExpenseCategory; defaultAmount: number }[] = [
   { title: 'Tiền sân cố định tháng', category: 'court', defaultAmount: 1800000 },
   { title: 'Thuê thêm 1 giờ sân phụ', category: 'court', defaultAmount: 120000 },
   { title: '2 Ống cầu Victor No.1', category: 'shuttlecock', defaultAmount: 520000 },
@@ -34,110 +29,178 @@ const PRESET_EXPENSES: { title: string; category: ExpenseCategory; defaultAmount
   { title: 'Mua quấn cán vợt + phụ kiện', category: 'other', defaultAmount: 80000 },
 ];
 
+const CATEGORY_KEYS = Object.keys(CATEGORY_CONFIG) as ExpenseCategory[];
+
+function toCategory(value: string): ExpenseCategory {
+  return (CATEGORY_KEYS as string[]).includes(value) ? (value as ExpenseCategory) : 'other';
+}
+
+function today(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Ghi nhớ phân loại vừa dùng để nhập liên tiếp nhiều khoản cùng loại không phải
+ * chọn lại. Đặt ngoài component vì modal bị unmount sau mỗi lần lưu.
+ */
+let lastUsedCategory: ExpenseCategory = 'court';
+
+interface FieldErrors {
+  title?: string;
+  amount?: string;
+  payer?: string;
+  participants?: string;
+}
+
 export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
-  initialData,
+  monthKey,
   members,
+  initialData,
   onSave,
   onClose,
 }) => {
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('court');
-  const [amountInput, setAmountInput] = useState('');
-  const [paidById, setPaidById] = useState<string>('');
-  const [splitType, setSplitType] = useState<'all' | 'custom'>('all');
-  const [participantIds, setParticipantIds] = useState<string[]>([]);
-  const [date, setDate] = useState<string>('');
-  const [note, setNote] = useState('');
+  const isEdit = Boolean(initialData?.id);
 
-  useEffect(() => {
-    if (initialData) {
-      setTitle(initialData.title);
-      setCategory(initialData.category);
-      setAmountInput(initialData.amount.toString());
-      setPaidById(initialData.paidById);
-      setSplitType(initialData.splitType);
-      setParticipantIds(
-        initialData.participantIds && initialData.participantIds.length > 0
-          ? initialData.participantIds
-          : members.map((m) => m.id)
-      );
-      setDate(initialData.date || new Date().toISOString().split('T')[0]);
-      setNote(initialData.note || '');
-    } else {
-      setTitle('');
-      setCategory('court');
-      setAmountInput('');
-      setPaidById(members[0]?.id || '');
-      setSplitType('all');
-      setParticipantIds(members.map((m) => m.id));
-      setDate(new Date().toISOString().split('T')[0]);
-      setNote('');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData?.id]);
+  // Người mới tạo ngay trong modal: giữ tạm ở đây để ô "người đã chi" có sẵn
+  // lựa chọn, kể cả trước khi server component kịp trả danh sách mới.
+  const [newMembers, setNewMembers] = useState<ViewMember[]>([]);
+  const allMembers = [...members, ...newMembers.filter((n) => !members.some((m) => m.id === n.id))];
+
+  const [title, setTitle] = useState(initialData?.title ?? '');
+  const [category, setCategory] = useState<ExpenseCategory>(
+    initialData ? toCategory(initialData.category) : lastUsedCategory
+  );
+  const [amountInput, setAmountInput] = useState(
+    initialData ? String(initialData.amount) : ''
+  );
+  const [paidById, setPaidById] = useState<string>(
+    initialData?.paidById ?? members[0]?.id ?? ''
+  );
+  const [splitType, setSplitType] = useState<'all' | 'custom'>(
+    initialData?.splitType === 'custom' ? 'custom' : 'all'
+  );
+  const [participantIds, setParticipantIds] = useState<string[]>(
+    initialData && initialData.participantIds.length > 0
+      ? initialData.participantIds
+      : members.map((m) => m.id)
+  );
+  const [date, setDate] = useState<string>(initialData?.date ?? today());
+  const [note, setNote] = useState(initialData?.note ?? '');
+
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [quickAddError, setQuickAddError] = useState<string | null>(null);
 
   const numericAmount = parseVNDInput(amountInput);
 
   const handleAddAmount = (add: number) => {
-    const current = numericAmount || 0;
-    setAmountInput((current + add).toString());
+    setAmountInput(String((numericAmount || 0) + add));
+    setErrors((e) => ({ ...e, amount: undefined }));
   };
 
-  const handlePresetSelect = (p: typeof PRESET_EXPENSES[0]) => {
-    setTitle(p.title);
-    setCategory(p.category);
-    if (p.defaultAmount && !numericAmount) {
-      setAmountInput(p.defaultAmount.toString());
-    }
+  /**
+   * Chọn mẫu là chọn cả gói: tên + phân loại + số tiền. Trước đây số tiền chỉ
+   * điền khi ô đang trống nên bấm mẫu thứ hai sẽ đổi tên mà giữ nguyên tiền cũ.
+   */
+  const handlePresetSelect = (preset: (typeof PRESET_EXPENSES)[number]) => {
+    setTitle(preset.title);
+    setCategory(preset.category);
+    setAmountInput(String(preset.defaultAmount));
+    setErrors((e) => ({ ...e, title: undefined, amount: undefined }));
   };
 
   const toggleParticipant = (memberId: string) => {
-    if (participantIds.includes(memberId)) {
-      if (participantIds.length > 1) {
-        setParticipantIds(participantIds.filter((id) => id !== memberId));
-      }
-    } else {
-      setParticipantIds([...participantIds, memberId]);
-    }
+    setParticipantIds((prev) =>
+      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]
+    );
+    setErrors((e) => ({ ...e, participants: undefined }));
   };
 
   const selectAllParticipants = () => {
-    setParticipantIds(members.map((m) => m.id));
+    setParticipantIds(allMembers.map((m) => m.id));
+    setErrors((e) => ({ ...e, participants: undefined }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleQuickAddMember = async () => {
+    const name = quickName.trim();
+    if (!name) {
+      setQuickAddError('Vui lòng nhập tên người mới');
+      return;
+    }
+    setIsAddingMember(true);
+    setQuickAddError(null);
+    try {
+      const newId = await createMember(monthKey, { name, isPermanent: false });
+      const created: ViewMember = {
+        id: newId,
+        name,
+        phone: null,
+        qrImagePath: null,
+        color: null,
+        isPermanent: false,
+      };
+      setNewMembers((prev) => [...prev, created]);
+      setPaidById(newId);
+      setParticipantIds((prev) => (prev.includes(newId) ? prev : [...prev, newId]));
+      setQuickName('');
+      setShowQuickAdd(false);
+      setErrors((e) => ({ ...e, payer: undefined }));
+    } catch (err) {
+      setQuickAddError(err instanceof Error ? err.message : 'Không thêm được người mới');
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      alert('Vui lòng nhập tên khoản chi!');
-      return;
-    }
-    if (numericAmount <= 0) {
-      alert('Vui lòng nhập số tiền hợp lệ (> 0 đ)!');
-      return;
-    }
-    if (!paidById) {
-      alert('Vui lòng chọn người đã chi trước khoản này!');
-      return;
+    if (isSaving) return;
+
+    const nextErrors: FieldErrors = {};
+    if (!title.trim()) nextErrors.title = 'Vui lòng nhập tên khoản chi';
+    if (numericAmount <= 0) nextErrors.amount = 'Vui lòng nhập số tiền hợp lệ (> 0 đ)';
+    if (!paidById) nextErrors.payer = 'Vui lòng chọn người đã chi trước khoản này';
+    if (splitType === 'custom' && participantIds.length === 0) {
+      nextErrors.participants = 'Chọn ít nhất một người tham gia';
     }
 
-    const effectiveParticipants =
-      splitType === 'all' ? members.map((m) => m.id) : participantIds;
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
-    const expenseItem: ExpenseItem = {
-      id: initialData ? initialData.id : `e_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    // Gửi đúng thứ giao diện đang hiển thị: chế độ "chia đều" để server tự mở
+    // ra toàn bộ thành viên của tháng, chế độ "chọn người" gửi danh sách đã tick.
+    const input: ExpenseInput = {
+      ...(isEdit && initialData ? { id: initialData.id } : {}),
       title: title.trim(),
       category,
       amount: numericAmount,
       paidById,
       splitType,
-      participantIds: effectiveParticipants,
-      date: date || new Date().toISOString().split('T')[0],
-      note: note.trim() || undefined,
+      participantIds: splitType === 'all' ? [] : participantIds,
+      date: date || today(),
+      note: note.trim() || null,
     };
 
-    onSave(expenseItem);
-    onClose();
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSave(input);
+      lastUsedCategory = category;
+      onClose();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Không lưu được khoản chi');
+      setIsSaving(false);
+    }
   };
+
+  const errorText = 'mt-1 text-xs font-semibold text-red-600';
+  const inputBase =
+    'w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-900 focus:outline-hidden';
 
   return (
     <div
@@ -155,11 +218,12 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           <div className="flex items-center gap-2">
             <PlusCircle className="h-5 w-5 text-indigo-400" />
             <h3 className="font-semibold text-lg">
-              {initialData ? 'Chỉnh Sửa Khoản Chi' : 'Ghi Nhận Khoản Chi Mới'}
+              {isEdit ? 'Chỉnh Sửa Khoản Chi' : 'Ghi Nhận Khoản Chi Mới'}
             </h3>
           </div>
           <button
             id="close-expense-modal-btn"
+            type="button"
             onClick={onClose}
             className="rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
           >
@@ -168,7 +232,11 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form
+          id="expense-form"
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-6 space-y-5"
+        >
           {/* Quick Preset Badges */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1 mb-2">
@@ -195,7 +263,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               Phân loại khoản chi
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-              {(Object.keys(CATEGORY_CONFIG) as ExpenseCategory[]).map((cat) => {
+              {CATEGORY_KEYS.map((cat) => {
                 const conf = CATEGORY_CONFIG[cat];
                 const isSelected = category === cat;
                 return (
@@ -219,23 +287,35 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           {/* Title & Amount */}
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+              <label
+                htmlFor="expense-title-input"
+                className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1"
+              >
                 Tên khoản chi <span className="text-red-500">*</span>
               </label>
               <input
                 id="expense-title-input"
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setErrors((prev) => ({ ...prev, title: undefined }));
+                }}
                 placeholder="VD: Tiền sân tháng 8, 2 hộp cầu Victor, Nước suối..."
-                required
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                aria-invalid={Boolean(errors.title)}
+                className={`${inputBase} ${
+                  errors.title ? 'border-red-400' : 'border-slate-200 focus:border-indigo-500'
+                }`}
               />
+              {errors.title && <p className={errorText}>{errors.title}</p>}
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <label
+                  htmlFor="expense-amount-input"
+                  className="block text-xs font-semibold uppercase tracking-wider text-slate-500"
+                >
                   Số tiền (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 {numericAmount > 0 && (
@@ -247,48 +327,36 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               <input
                 id="expense-amount-input"
                 type="text"
+                inputMode="numeric"
                 value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
+                onChange={(e) => {
+                  setAmountInput(e.target.value);
+                  setErrors((prev) => ({ ...prev, amount: undefined }));
+                }}
                 placeholder="Nhập số tiền (VD: 500k, 1.2tr, 250000)"
-                required
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-bold text-slate-900 focus:border-indigo-500 focus:outline-hidden font-mono"
+                aria-invalid={Boolean(errors.amount)}
+                className={`${inputBase} text-base font-bold font-mono ${
+                  errors.amount ? 'border-red-400' : 'border-slate-200 focus:border-indigo-500'
+                }`}
               />
+              {errors.amount && <p className={errorText}>{errors.amount}</p>}
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <button
-                  type="button"
-                  onClick={() => handleAddAmount(50000)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  +50k
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddAmount(100000)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  +100k
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddAmount(250000)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  +250k
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddAmount(500000)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  +500k
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddAmount(1000000)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  +1 Triệu
-                </button>
+                {[
+                  { label: '+50k', value: 50000 },
+                  { label: '+100k', value: 100000 },
+                  { label: '+250k', value: 250000 },
+                  { label: '+500k', value: 500000 },
+                  { label: '+1 Triệu', value: 1000000 },
+                ].map((chip) => (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    onClick={() => handleAddAmount(chip.value)}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
                 <button
                   type="button"
                   onClick={() => setAmountInput('')}
@@ -303,31 +371,99 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           {/* Payer & Date */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                Người đã móc ví chi trước <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label
+                  htmlFor="expense-payer-select"
+                  className="block text-xs font-semibold uppercase tracking-wider text-slate-500"
+                >
+                  Người đã móc ví chi trước <span className="text-red-500">*</span>
+                </label>
+                <button
+                  id="quick-add-member-btn"
+                  type="button"
+                  onClick={() => {
+                    setShowQuickAdd((v) => !v);
+                    setQuickAddError(null);
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:underline"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Thêm người mới
+                </button>
+              </div>
               <select
                 id="expense-payer-select"
                 value={paidById}
-                onChange={(e) => setPaidById(e.target.value)}
-                required
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                onChange={(e) => {
+                  setPaidById(e.target.value);
+                  setErrors((prev) => ({ ...prev, payer: undefined }));
+                }}
+                aria-invalid={Boolean(errors.payer)}
+                className={`${inputBase} font-semibold ${
+                  errors.payer ? 'border-red-400' : 'border-slate-200 focus:border-indigo-500'
+                }`}
               >
-                {members.map((m) => (
+                <option value="">-- Chọn người chi --</option>
+                {allMembers.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} {m.isPermanent === false ? '(Vãng lai)' : ''}
                   </option>
                 ))}
               </select>
+              {errors.payer && <p className={errorText}>{errors.payer}</p>}
+
+              {showQuickAdd && (
+                <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-2.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="quick-member-name-input"
+                      type="text"
+                      value={quickName}
+                      onChange={(e) => {
+                        setQuickName(e.target.value);
+                        setQuickAddError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          void handleQuickAddMember();
+                        }
+                      }}
+                      placeholder="Tên người mới (vãng lai)"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleQuickAddMember()}
+                      disabled={isAddingMember}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isAddingMember ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                      Thêm
+                    </button>
+                  </div>
+                  {quickAddError && <p className={errorText}>{quickAddError}</p>}
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Ngày chi</label>
+              <label
+                htmlFor="expense-date-input"
+                className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1"
+              >
+                Ngày chi
+              </label>
               <input
+                id="expense-date-input"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                className={`${inputBase} border-slate-200 focus:border-indigo-500`}
               />
             </div>
           </div>
@@ -350,7 +486,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                       : 'bg-white text-slate-600 border border-slate-200'
                   }`}
                 >
-                  Chia đều ({members.length} người)
+                  Chia đều ({allMembers.length} người)
                 </button>
                 <button
                   type="button"
@@ -372,7 +508,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] text-slate-500">
                     Đã chọn <strong className="text-indigo-600">{participantIds.length}</strong> /{' '}
-                    {members.length} người (
+                    {allMembers.length} người (
                     {numericAmount > 0 && participantIds.length > 0
                       ? `Mỗi người ${formatVND(numericAmount / participantIds.length)}`
                       : ''}
@@ -388,7 +524,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-36 overflow-y-auto p-1">
-                  {members.map((m) => {
+                  {allMembers.map((m) => {
                     const isChecked = participantIds.includes(m.id);
                     return (
                       <label
@@ -410,23 +546,34 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                     );
                   })}
                 </div>
+                {errors.participants && <p className={errorText}>{errors.participants}</p>}
               </div>
             )}
           </div>
 
           {/* Note */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+            <label
+              htmlFor="expense-note-input"
+              className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1"
+            >
               Ghi chú thêm (tùy chọn)
             </label>
             <input
+              id="expense-note-input"
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="VD: Cọc trước 50%, mua tại shop VNB, v.v."
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+              className={`${inputBase} border-slate-200 focus:border-indigo-500`}
             />
           </div>
+
+          {saveError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+              {saveError}
+            </div>
+          )}
         </form>
 
         {/* Footer */}
@@ -434,18 +581,24 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+            disabled={isSaving}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Hủy
           </button>
           <button
-            type="button"
+            type="submit"
+            form="expense-form"
             id="submit-expense-form-btn"
-            onClick={handleSubmit}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            disabled={isSaving}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-indigo-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Check className="h-4 w-4" />
-            {initialData ? 'Cập nhật' : 'Thêm khoản chi'}
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {isSaving ? 'Đang lưu...' : isEdit ? 'Cập nhật' : 'Thêm khoản chi'}
           </button>
         </div>
       </div>

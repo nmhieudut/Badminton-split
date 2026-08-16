@@ -1,30 +1,26 @@
-import React, { useState } from 'react';
-import { X, Edit3, Trash2, Check, Calendar, DollarSign } from 'lucide-react';
-import { MonthSession } from '../types';
-import { formatVND, parseVNDInput } from '../utils/settlement';
+'use client';
+
+import React, { useState, useTransition } from 'react';
+import { X, Edit3, Trash2, Check, Calendar, Loader2 } from 'lucide-react';
+import type { ViewMonth } from '../lib/view-types';
+import { parseVNDInput } from '../lib/money';
+import { deleteMonth, updateMonth } from '../app/actions/months';
 import { ConfirmDialog } from './ConfirmDialog';
 
 interface EditMonthModalProps {
-  session: MonthSession;
+  month: ViewMonth;
   canDelete: boolean;
-  onUpdateSession: (updated: MonthSession) => void;
-  onDeleteSession: (sessionId: string) => void;
   onClose: () => void;
 }
 
-export const EditMonthModal: React.FC<EditMonthModalProps> = ({
-  session,
-  canDelete,
-  onUpdateSession,
-  onDeleteSession,
-  onClose,
-}) => {
-  const [title, setTitle] = useState(session.title || `Tháng ${session.monthKey}`);
-  const [note, setNote] = useState(session.note || '');
+export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete, onClose }) => {
+  const [title, setTitle] = useState(month.title || `Tháng ${month.monthKey}`);
+  const [note, setNote] = useState(month.note ?? '');
   const [initialFundInput, setInitialFundInput] = useState(
-    session.initialFund ? session.initialFund.toLocaleString('vi-VN') : '0'
+    month.initialFund ? month.initialFund.toLocaleString('vi-VN') : '0'
   );
   const [isConfirmDeleting, setIsConfirmDeleting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const handleFundChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '');
@@ -39,13 +35,20 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const fund = parseVNDInput(initialFundInput);
-    onUpdateSession({
-      ...session,
-      title: title.trim() || `Tháng ${session.monthKey}`,
-      note: note.trim() || undefined,
-      initialFund: fund,
+    startTransition(async () => {
+      await updateMonth(month.id, {
+        title: title.trim() || `Tháng ${month.monthKey}`,
+        note: note.trim() || null,
+        initialFund: fund,
+      });
+      onClose();
     });
-    onClose();
+  };
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      await deleteMonth(month.id);
+    });
   };
 
   return (
@@ -82,7 +85,7 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({
               </label>
               <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-mono font-bold text-slate-700">
                 <Calendar className="h-4 w-4 text-indigo-600" />
-                <span>{session.monthKey}</span>
+                <span>{month.monthKey}</span>
               </div>
             </div>
 
@@ -138,16 +141,15 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({
               {canDelete ? (
                 <button
                   type="button"
+                  disabled={isPending}
                   onClick={() => setIsConfirmDeleting(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Xóa kỳ này</span>
                 </button>
               ) : (
-                <span className="text-[11px] text-slate-400 italic">
-                  Không thể xóa kỳ duy nhất
-                </span>
+                <span className="text-[11px] text-slate-400 italic">Không thể xóa kỳ duy nhất</span>
               )}
 
               <div className="flex items-center gap-2">
@@ -160,9 +162,14 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
+                  disabled={isPending}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer disabled:opacity-60"
                 >
-                  <Check className="h-3.5 w-3.5" />
+                  {isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
                   Lưu Thay Đổi
                 </button>
               </div>
@@ -175,19 +182,19 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({
         <ConfirmDialog
           isOpen={true}
           type="danger"
-          title={`Xác Nhận Xóa "${session.title}"?`}
+          title={`Xác Nhận Xóa "${month.title}"?`}
           message={
             <span>
               Bạn có chắc chắn muốn xóa hoàn toàn dữ liệu kỳ đánh{' '}
-              <strong className="text-slate-900">{session.title}</strong>? Toàn bộ danh sách buổi đánh, điểm danh và khoản chi trong kỳ này sẽ bị xóa.
+              <strong className="text-slate-900">{month.title}</strong>? Toàn bộ danh sách buổi đánh,
+              điểm danh và khoản chi trong kỳ này sẽ bị xóa.
             </span>
           }
           confirmText="Xác nhận xóa kỳ"
           cancelText="Giữ lại"
           onConfirm={() => {
-            onDeleteSession(session.id);
             setIsConfirmDeleting(false);
-            onClose();
+            handleDelete();
           }}
           onCancel={() => setIsConfirmDeleting(false)}
         />

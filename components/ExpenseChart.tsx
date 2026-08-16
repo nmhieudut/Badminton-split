@@ -1,18 +1,28 @@
+'use client';
+
 import React from 'react';
-import { DailySession, ExpenseCategory, ExpenseItem, Member, CATEGORY_CONFIG } from '../types';
-import { formatVND, getMemberColor } from '../utils/settlement';
-import { PieChart, TrendingUp, Award, Layers } from 'lucide-react';
+import { CATEGORY_CONFIG, type ExpenseCategory } from '../lib/categories';
+import { formatVND } from '../lib/money';
+import type { ViewDailySession, ViewExpense, ViewMember } from '../lib/view-types';
+import { Award, Layers } from 'lucide-react';
 
 interface ExpenseChartProps {
-  expenses: ExpenseItem[];
-  dailySessions?: DailySession[];
-  members: Member[];
+  expenses: ViewExpense[];
+  dailySessions: ViewDailySession[];
+  members: ViewMember[];
+}
+
+const CATEGORY_KEYS = Object.keys(CATEGORY_CONFIG) as ExpenseCategory[];
+
+/** Phân loại lưu dưới dạng text trong DB nên phải quy về khóa hợp lệ khi cộng. */
+function toCategory(value: string): ExpenseCategory {
+  return (CATEGORY_KEYS as string[]).includes(value) ? (value as ExpenseCategory) : 'other';
 }
 
 export const ExpenseChart: React.FC<ExpenseChartProps> = ({
-  expenses = [],
-  dailySessions = [],
-  members = [],
+  expenses,
+  dailySessions,
+  members,
 }) => {
   // Group by category
   const categoryTotals: Record<ExpenseCategory, number> = {
@@ -33,9 +43,7 @@ export const ExpenseChart: React.FC<ExpenseChartProps> = ({
   dailySessions.forEach((s) => {
     const courtFee = s.courtFee || 0;
     const shuttleFee =
-      s.shuttlecockTotalFee !== undefined
-        ? s.shuttlecockTotalFee
-        : (s.shuttlecockCount || 0) * (s.shuttlecockPricePerItem || 25000);
+      s.shuttlecockTotalFee ?? (s.shuttlecockCount || 0) * (s.shuttlecockPricePerItem || 0);
     const drinkFee = s.drinkFee || 0;
     const otherFee = s.otherFee || 0;
 
@@ -60,27 +68,26 @@ export const ExpenseChart: React.FC<ExpenseChartProps> = ({
 
   // 2. Process General Expenses
   expenses.forEach((item) => {
-    categoryTotals[item.category] = (categoryTotals[item.category] || 0) + item.amount;
+    const cat = toCategory(item.category);
+    categoryTotals[cat] += item.amount;
     payerTotals[item.paidById] = (payerTotals[item.paidById] || 0) + item.amount;
   });
 
   const totalAmount = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0);
 
-  const categoryEntries = (Object.keys(CATEGORY_CONFIG) as ExpenseCategory[])
-    .map((cat) => ({
+  const categoryEntries = CATEGORY_KEYS.map((cat) => ({
       category: cat,
-      amount: categoryTotals[cat] || 0,
+      amount: categoryTotals[cat],
       config: CATEGORY_CONFIG[cat],
-      percent: totalAmount > 0 ? ((categoryTotals[cat] || 0) / totalAmount) * 100 : 0,
+      percent: totalAmount > 0 ? (categoryTotals[cat] / totalAmount) * 100 : 0,
     }))
     .filter((entry) => entry.amount > 0)
     .sort((a, b) => b.amount - a.amount);
 
   const topPayerEntries = members
-    .map((m, idx) => ({
+    .map((m) => ({
       member: m,
       amount: payerTotals[m.id] || 0,
-      colorIndex: idx,
       percent: totalAmount > 0 ? ((payerTotals[m.id] || 0) / totalAmount) * 100 : 0,
     }))
     .filter((e) => e.amount > 0)

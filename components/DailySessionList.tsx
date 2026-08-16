@@ -13,7 +13,7 @@ import {
   Award,
   CalendarDays,
 } from 'lucide-react';
-import type { ViewDailySession, ViewMember } from '../lib/view-types';
+import type { ViewDailySession, ViewMember, ViewSettlementRow } from '../lib/view-types';
 import { formatVND } from '../lib/money';
 import { getMemberColor } from '../lib/categories';
 import { CalendarView } from './CalendarView';
@@ -27,6 +27,8 @@ interface DailySessionListProps {
   onEditSession: (session: ViewDailySession) => void;
   onDeleteSession: (sessionId: string) => void;
   onDuplicateSession: (session: ViewDailySession) => void;
+  /** Quyết toán đã tính sẵn ở server — chỉ để hiển thị, không tính lại ở đây. */
+  settlementRows: ViewSettlementRow[];
 }
 
 /** Tiền cầu của một buổi: ưu tiên tổng tiền nhập tay, nếu không thì số quả × đơn giá. */
@@ -46,6 +48,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
   onEditSession,
   onDeleteSession,
   onDuplicateSession,
+  settlementRows,
 }) => {
   const [viewMode, setViewMode] = useState<'calendar' | 'cards' | 'matrix'>('calendar');
   const [selectedCourtFilter, setSelectedCourtFilter] = useState<string>('all');
@@ -59,29 +62,17 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
     return s.courtName === selectedCourtFilter;
   });
 
-  // Calculate attendance per member
-  const memberAttendanceStats = members.map((m) => {
-    const attendedSessions = sessions.filter(
-      (s) => s.attendeeIds && s.attendeeIds.includes(m.id)
-    );
-    const attendedCount = attendedSessions.length;
-    const totalCostShare = attendedSessions.reduce((acc, s) => {
-      const attendees = s.attendeeIds && s.attendeeIds.length > 0 ? s.attendeeIds : members.map((x) => x.id);
-      const sCourt = s.courtFee || 0;
-      const sShuttle =
-        s.shuttlecockTotalFee !== undefined
-          ? s.shuttlecockTotalFee
-          : (s.shuttlecockCount || 0) * (s.shuttlecockPricePerItem || 25000);
-      const sDrink = (s.drinkFee || 0) + (s.otherFee || 0);
-      const sTotal = sCourt + sShuttle + sDrink;
-      return acc + (attendees.length > 0 ? sTotal / attendees.length : 0);
-    }, 0);
+  // Thống kê điểm danh. Số buổi đếm tại chỗ vì nó phụ thuộc bộ lọc đang chọn;
+  // còn tiền thì lấy nguyên từ quyết toán của server, không tính lại.
+  const shareByMember = new Map(settlementRows.map((r) => [r.memberId, r.totalShare]));
 
+  const memberAttendanceStats = members.map((m) => {
+    const attendedCount = sessions.filter((s) => s.attendeeIds.includes(m.id)).length;
     return {
       member: m,
       attendedCount,
-      totalCostShare,
       attendanceRate: sessions.length > 0 ? (attendedCount / sessions.length) * 100 : 0,
+      totalShare: shareByMember.get(m.id) ?? 0,
     };
   });
 
@@ -163,9 +154,9 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
       {/* Main Content Area */}
       {viewMode === 'calendar' ? (
         <CalendarView
+          monthKey={monthKey}
           sessions={sessions}
           members={members}
-          monthKey={monthKey}
           onAddSessionOnDate={(dateStr) => onAddSession(dateStr)}
           onEditSession={onEditSession}
           onDeleteSession={(sId) => {
@@ -173,8 +164,6 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
             if (target) setSessionToDelete(target);
           }}
           onDuplicateSession={onDuplicateSession}
-          onMonthChange={onMonthChange}
-          onOpenYearMonthPicker={onOpenYearMonthPicker}
         />
       ) : sessions.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-12 text-center">
@@ -197,13 +186,9 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
         /* Cards View */
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {filteredSessions.map((session) => {
-            const sShuttle =
-              session.shuttlecockTotalFee !== undefined
-                ? session.shuttlecockTotalFee
-                : (session.shuttlecockCount || 0) * (session.shuttlecockPricePerItem || 25000);
-            const sTotal =
-              (session.courtFee || 0) + sShuttle + (session.drinkFee || 0) + (session.otherFee || 0);
-            const attendees = session.attendeeIds || [];
+            const sShuttle = shuttleTotal(session);
+            const sTotal = sessionTotal(session);
+            const attendees = session.attendeeIds;
             const perPerson = attendees.length > 0 ? sTotal / attendees.length : 0;
             const courtPayer = members.find((m) => m.id === session.courtPayerId)?.name || 'Chưa rõ';
 
@@ -267,7 +252,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                         Nước / Khác
                       </span>
                       <span className="font-mono font-bold text-slate-800 text-xs">
-                        {formatVND((session.drinkFee || 0) + (session.otherFee || 0))}
+                        {formatVND(session.drinkFee + session.otherFee)}
                       </span>
                     </div>
                   </div>
@@ -309,7 +294,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                   <button
                     onClick={() => onDuplicateSession(session)}
                     className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
-                    title="Nhân bản buổi này sang ngày tiếp theo"
+                    title="Nhân bản buổi này — mở form để chọn ngày mới"
                   >
                     <Copy className="h-3.5 w-3.5 text-slate-400" />
                     Nhân bản
@@ -361,8 +346,8 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                     <th className="p-3.5 text-center font-bold uppercase tracking-wider bg-slate-800 border-l border-slate-700 min-w-[90px]">
                       Số buổi
                     </th>
-                    <th className="p-3.5 text-right font-bold uppercase tracking-wider bg-slate-800 border-l border-slate-700 min-w-[120px]">
-                      Tổng tiền sân & cầu
+                    <th className="p-3.5 text-center font-bold uppercase tracking-wider bg-slate-800 border-l border-slate-700 min-w-[110px]">
+                      Phải chịu
                     </th>
                   </tr>
                 </thead>
@@ -383,7 +368,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                         </td>
 
                         {sessions.map((s) => {
-                          const isAttended = s.attendeeIds && s.attendeeIds.includes(m.id);
+                          const isAttended = s.attendeeIds.includes(m.id);
                           return (
                             <td
                               key={s.id}
@@ -409,8 +394,8 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                           </span>
                         </td>
 
-                        <td className="p-3 text-right font-mono font-black text-indigo-700 border-l border-slate-200 bg-indigo-50/20">
-                          {formatVND(stat.totalCostShare)}
+                        <td className="p-3 text-center font-mono font-bold text-indigo-700 border-l border-slate-200 bg-slate-50/40">
+                          {formatVND(stat.totalShare)}
                         </td>
                       </tr>
                     );
@@ -446,7 +431,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                     </div>
                   </div>
                   <span className="font-mono text-xs font-bold text-indigo-700">
-                    {formatVND(stat.totalCostShare)}
+                    {stat.attendedCount} buổi
                   </span>
                 </div>
               ))}
@@ -471,12 +456,8 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
             </span>
           }
           details={[
-            `Tổng chi phí buổi: ${formatVND(
-              (sessionToDelete.courtFee || 0) +
-                (sessionToDelete.shuttlecockCount || 0) * (sessionToDelete.shuttlecockPricePerItem || 25000) +
-                (sessionToDelete.drinkFee || 0)
-            )}`,
-            `Có ${sessionToDelete.attendeeIds?.length || 0} thành viên đã điểm danh trong buổi này`,
+            `Tổng chi phí buổi: ${formatVND(sessionTotal(sessionToDelete))}`,
+            `Có ${sessionToDelete.attendeeIds.length} thành viên đã điểm danh trong buổi này`,
             'Số tiền quyết toán cuối tháng sẽ được tự động tính toán lại',
           ]}
           confirmText="Xác nhận xóa"

@@ -1,196 +1,207 @@
-import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Check,
-  Calendar,
-  Users,
-  Plus,
-  Minus,
-  UserPlus,
-  Trash2,
-} from 'lucide-react';
-import { DailySession, Member } from '../types';
-import { formatVND, parseVNDInput } from '../utils/settlement';
-import { ConfirmDialog } from './ConfirmDialog';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { X, Check, Calendar, Users, Plus, Minus, Loader2 } from 'lucide-react';
+import type { DailySessionInput } from '../app/actions/daily-sessions';
+import type { SessionDefaults, ViewDailySession, ViewMember } from '../lib/view-types';
+import { formatVND, parseVNDInput } from '../lib/money';
 
 interface DailySessionModalProps {
-  initialData?: DailySession | null;
+  members: ViewMember[];
+  initialData: ViewDailySession | null;
+  defaults: SessionDefaults;
   defaultDate?: string;
-  members: Member[];
-  onSave: (session: DailySession) => void;
-  onDelete?: (sessionId: string) => void;
-  onAddQuickMember?: (newMember: Member) => void;
+  onSave: (input: DailySessionInput) => Promise<void>;
   onClose: () => void;
 }
 
-const COURT_PRESETS = [
-  'Sân 1 - Kỳ Hòa',
-  'Sân 2 - Kỳ Hòa',
-  'Sân 3 - Kỳ Hòa',
-  'Sân Viettel',
-  'Sân Lan Anh',
-  'Sân Bình Thạnh',
-  'Sân Cầu Lông Tân Bình',
-];
+/** `initialData` khi sửa → `defaults` (buổi gần nhất) khi thêm mới → để trống. */
+function pickText(...values: (string | number | null | undefined)[]): string {
+  for (const v of values) {
+    if (v !== null && v !== undefined && v !== '') return String(v);
+  }
+  return '';
+}
+
+const SHUTTLE_PRICE_CHIPS = [22000, 25000, 27000, 30000];
 
 export const DailySessionModal: React.FC<DailySessionModalProps> = ({
-  initialData,
-  defaultDate,
   members,
+  initialData,
+  defaults,
+  defaultDate,
   onSave,
-  onDelete,
-  onAddQuickMember,
   onClose,
 }) => {
-  const [date, setDate] = useState<string>('');
-  const [courtName, setCourtName] = useState<string>('Sân 3 - Kỳ Hòa');
-  const [courtFeeInput, setCourtFeeInput] = useState<string>('180000');
-  const [courtPayerId, setCourtPayerId] = useState<string>('');
+  const today = new Date().toISOString().split('T')[0];
 
-  const [shuttlecockCount, setShuttlecockCount] = useState<number>(4);
-  const [shuttlecockPriceInput, setShuttlecockPriceInput] = useState<string>('25000');
-  const [shuttlecockPayerId, setShuttlecockPayerId] = useState<string>('');
+  const [date, setDate] = useState<string>(initialData?.date ?? defaultDate ?? today);
+  const [courtName, setCourtName] = useState<string>(
+    pickText(initialData?.courtName, defaults?.courtName)
+  );
+  const [courtFeeInput, setCourtFeeInput] = useState<string>(
+    pickText(initialData?.courtFee, defaults?.courtFee)
+  );
+  const [courtPayerId, setCourtPayerId] = useState<string>(
+    pickText(initialData?.courtPayerId, defaults?.courtPayerId)
+  );
 
-  const [drinkFeeInput, setDrinkFeeInput] = useState<string>('0');
-  const [drinkPayerId, setDrinkPayerId] = useState<string>('');
+  const [shuttlecockCountInput, setShuttlecockCountInput] = useState<string>(
+    pickText(initialData?.shuttlecockCount, defaults?.shuttlecockCount)
+  );
+  const [shuttlecockPriceInput, setShuttlecockPriceInput] = useState<string>(
+    pickText(initialData?.shuttlecockPricePerItem, defaults?.shuttlecockPricePerItem)
+  );
+  const [shuttlecockPayerId, setShuttlecockPayerId] = useState<string>(
+    pickText(initialData?.shuttlecockPayerId, defaults?.shuttlecockPayerId)
+  );
+  const [overrideShuttleTotal, setOverrideShuttleTotal] = useState<boolean>(
+    initialData?.shuttlecockTotalFee != null
+  );
+  const [shuttleTotalInput, setShuttleTotalInput] = useState<string>(
+    pickText(initialData?.shuttlecockTotalFee)
+  );
 
-  const [attendeeIds, setAttendeeIds] = useState<string[]>([]);
-  const [note, setNote] = useState<string>('');
+  const [drinkFeeInput, setDrinkFeeInput] = useState<string>(pickText(initialData?.drinkFee));
+  const [drinkPayerId, setDrinkPayerId] = useState<string>(pickText(initialData?.drinkPayerId));
+  const [otherFeeInput, setOtherFeeInput] = useState<string>(pickText(initialData?.otherFee));
+  const [otherFeePayerId, setOtherFeePayerId] = useState<string>(
+    pickText(initialData?.otherFeePayerId)
+  );
 
-  // Quick guest member input state
-  const [quickGuestName, setQuickGuestName] = useState('');
-  const [showQuickGuestInput, setShowQuickGuestInput] = useState(false);
+  const [attendeeIds, setAttendeeIds] = useState<string[]>(
+    initialData?.attendeeIds ?? defaults?.attendeeIds ?? members.map((m) => m.id)
+  );
+  const [note, setNote] = useState<string>(initialData?.note ?? '');
 
-  // Validation warning dialog
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [errors, setErrors] = useState<{
+    courtName?: string;
+    courtPayer?: string;
+    attendees?: string;
+    submit?: string;
+  }>({});
+  const [attendeeHint, setAttendeeHint] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Khi mở lại modal cho một buổi khác (hoặc một ngày khác) thì nạp lại toàn bộ form.
   useEffect(() => {
-    if (initialData) {
-      setDate(initialData.date);
-      setCourtName(initialData.courtName);
-      setCourtFeeInput(initialData.courtFee.toString());
-      setCourtPayerId(initialData.courtPayerId);
-      setShuttlecockCount(initialData.shuttlecockCount || 0);
-      setShuttlecockPriceInput((initialData.shuttlecockPricePerItem || 25000).toString());
-      setShuttlecockPayerId(initialData.shuttlecockPayerId);
-      setDrinkFeeInput((initialData.drinkFee || 0).toString());
-      setDrinkPayerId(initialData.drinkPayerId || initialData.courtPayerId);
-      setAttendeeIds(
-        initialData.attendeeIds && initialData.attendeeIds.length > 0
-          ? initialData.attendeeIds
-          : members.map((m) => m.id)
-      );
-      setNote(initialData.note || '');
-    } else {
-      const targetDate = defaultDate || new Date().toISOString().split('T')[0];
-      setDate(targetDate);
-      setCourtName('Sân 3 - Kỳ Hòa');
-      setCourtFeeInput('180000');
-      setCourtPayerId(members[0]?.id || '');
-      setShuttlecockCount(4);
-      setShuttlecockPriceInput('25000');
-      setShuttlecockPayerId(members[1]?.id || members[0]?.id || '');
-      setDrinkFeeInput('0');
-      setDrinkPayerId(members[0]?.id || '');
-      // Default: check all permanent members or all members
-      const permIds = members.filter((m) => m.isPermanent !== false).map((m) => m.id);
-      setAttendeeIds(permIds.length > 0 ? permIds : members.map((m) => m.id));
-      setNote('');
-    }
+    setDate(initialData?.date ?? defaultDate ?? new Date().toISOString().split('T')[0]);
+    setCourtName(pickText(initialData?.courtName, defaults?.courtName));
+    setCourtFeeInput(pickText(initialData?.courtFee, defaults?.courtFee));
+    setCourtPayerId(pickText(initialData?.courtPayerId, defaults?.courtPayerId));
+    setShuttlecockCountInput(
+      pickText(initialData?.shuttlecockCount, defaults?.shuttlecockCount)
+    );
+    setShuttlecockPriceInput(
+      pickText(initialData?.shuttlecockPricePerItem, defaults?.shuttlecockPricePerItem)
+    );
+    setShuttlecockPayerId(pickText(initialData?.shuttlecockPayerId, defaults?.shuttlecockPayerId));
+    setOverrideShuttleTotal(initialData?.shuttlecockTotalFee != null);
+    setShuttleTotalInput(pickText(initialData?.shuttlecockTotalFee));
+    setDrinkFeeInput(pickText(initialData?.drinkFee));
+    setDrinkPayerId(pickText(initialData?.drinkPayerId));
+    setOtherFeeInput(pickText(initialData?.otherFee));
+    setOtherFeePayerId(pickText(initialData?.otherFeePayerId));
+    setAttendeeIds(initialData?.attendeeIds ?? defaults?.attendeeIds ?? members.map((m) => m.id));
+    setNote(initialData?.note ?? '');
+    setErrors({});
+    setAttendeeHint(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.id, defaultDate]);
 
   const numCourtFee = parseVNDInput(courtFeeInput);
+  const shuttlecockCount = Math.max(0, parseInt(shuttlecockCountInput, 10) || 0);
   const numShuttlePrice = parseVNDInput(shuttlecockPriceInput);
-  const totalShuttleFee = shuttlecockCount * numShuttlePrice;
+  const overriddenShuttleTotal = overrideShuttleTotal ? parseVNDInput(shuttleTotalInput) : null;
+  const totalShuttleFee = overriddenShuttleTotal ?? shuttlecockCount * numShuttlePrice;
   const numDrinkFee = parseVNDInput(drinkFeeInput);
-  const totalSessionCost = numCourtFee + totalShuttleFee + numDrinkFee;
+  const numOtherFee = parseVNDInput(otherFeeInput);
+  const totalSessionCost = numCourtFee + totalShuttleFee + numDrinkFee + numOtherFee;
   const attendeeCount = attendeeIds.length;
   const costPerAttendee = attendeeCount > 0 ? totalSessionCost / attendeeCount : 0;
 
+  const hasGuests = members.some((m) => m.isPermanent === false);
+  const permanentCount = members.filter((m) => m.isPermanent !== false).length;
+
+  const setCount = (n: number) => setShuttlecockCountInput(String(Math.max(0, n)));
+
   const toggleAttendee = (mId: string) => {
     if (attendeeIds.includes(mId)) {
-      if (attendeeIds.length > 1) {
-        setAttendeeIds(attendeeIds.filter((id) => id !== mId));
+      if (attendeeIds.length <= 1) {
+        setAttendeeHint('Buổi đánh phải có ít nhất 1 người có mặt để chia tiền.');
+        return;
       }
+      setAttendeeHint(null);
+      setAttendeeIds(attendeeIds.filter((id) => id !== mId));
     } else {
+      setAttendeeHint(null);
       setAttendeeIds([...attendeeIds, mId]);
     }
   };
 
   const handleSelectAllAttendees = () => {
+    setAttendeeHint(null);
     setAttendeeIds(members.map((m) => m.id));
   };
 
   const handleSelectPermanentOnly = () => {
+    setAttendeeHint(null);
     const perm = members.filter((m) => m.isPermanent !== false).map((m) => m.id);
     setAttendeeIds(perm.length > 0 ? perm : members.map((m) => m.id));
   };
 
-  const handleAddQuickGuest = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const guestName = quickGuestName.trim();
-    if (!guestName) return;
-
-    const newGuest: Member = {
-      id: `m_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      name: guestName,
-      isPermanent: false,
-    };
-
-    if (onAddQuickMember) {
-      onAddQuickMember(newGuest);
-    }
-    // Auto-check this new guest
-    setAttendeeIds((prev) => [...prev, newGuest.id]);
-    setQuickGuestName('');
-    setShowQuickGuestInput(false);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!courtName.trim()) {
-      setValidationError('Vui lòng nhập tên sân đánh!');
-      return;
+    if (isSaving) return;
+
+    const nextErrors: typeof errors = {};
+    if (!courtName.trim()) nextErrors.courtName = 'Vui lòng nhập tên sân đánh!';
+    if (!courtPayerId) {
+      nextErrors.courtPayer = 'Vui lòng chọn thành viên đã đứng ra thanh toán tiền sân!';
     }
     if (attendeeIds.length === 0) {
-      setValidationError('Vui lòng tích chọn ít nhất 1 thành viên có mặt hôm nay để chia tiền!');
+      nextErrors.attendees =
+        'Vui lòng tích chọn ít nhất 1 thành viên có mặt hôm nay để chia tiền!';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
-    if (!courtPayerId) {
-      setValidationError('Vui lòng chọn thành viên đã đứng ra thanh toán tiền sân!');
-      return;
-    }
+    setErrors({});
 
-    const dailySession: DailySession = {
-      id: initialData
-        ? initialData.id
-        : `ds_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    const input: DailySessionInput = {
+      ...(initialData ? { id: initialData.id } : {}),
       date: date || new Date().toISOString().split('T')[0],
       courtName: courtName.trim(),
       courtFee: numCourtFee,
-      courtPayerId: courtPayerId,
-      shuttlecockCount: shuttlecockCount,
+      courtPayerId: courtPayerId || null,
+      shuttlecockCount,
       shuttlecockPricePerItem: numShuttlePrice,
-      shuttlecockPayerId: shuttlecockPayerId || courtPayerId,
-      drinkFee: numDrinkFee > 0 ? numDrinkFee : undefined,
-      drinkPayerId: numDrinkFee > 0 ? drinkPayerId : undefined,
-      attendeeIds: attendeeIds,
-      note: note.trim() || undefined,
+      shuttlecockTotalFee: overriddenShuttleTotal,
+      shuttlecockPayerId: shuttlecockPayerId || courtPayerId || null,
+      drinkFee: numDrinkFee,
+      drinkPayerId: numDrinkFee > 0 ? drinkPayerId || null : null,
+      otherFee: numOtherFee,
+      otherFeePayerId: numOtherFee > 0 ? otherFeePayerId || null : null,
+      note: note.trim() || null,
+      attendeeIds,
     };
 
-    onSave(dailySession);
-    onClose();
-  };
-
-  const handleDeleteConfirmed = () => {
-    if (initialData && onDelete) {
-      onDelete(initialData.id);
-      setIsDeleteConfirmOpen(false);
+    setIsSaving(true);
+    try {
+      await onSave(input);
       onClose();
+    } catch (err) {
+      setErrors({
+        submit: err instanceof Error ? err.message : 'Lưu buổi đánh thất bại, vui lòng thử lại!',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  const inputClass =
+    'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden';
 
   return (
     <div
@@ -218,6 +229,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
           </div>
           <button
             id="close-daily-session-modal-btn"
+            type="button"
             onClick={onClose}
             className="rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
           >
@@ -226,7 +238,11 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form
+          id="daily-session-form"
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-6 space-y-5"
+        >
           {/* 1. Ngày & Sân bãi */}
           <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
             <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -243,7 +259,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                  className={inputClass}
                 />
               </div>
 
@@ -255,10 +271,14 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                   type="text"
                   value={courtName}
                   onChange={(e) => setCourtName(e.target.value)}
-                  placeholder="VD: Sân 3 - Kỳ Hòa"
+                  placeholder="Nhập tên sân đánh"
                   required
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                  aria-invalid={!!errors.courtName}
+                  className={`${inputClass} ${errors.courtName ? 'border-rose-400' : ''}`}
                 />
+                {errors.courtName && (
+                  <p className="mt-1 text-[11px] font-semibold text-rose-600">{errors.courtName}</p>
+                )}
               </div>
 
               <div>
@@ -270,29 +290,24 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                   value={courtFeeInput}
                   onChange={(e) => setCourtFeeInput(e.target.value)}
                   placeholder="VD: 180k, 200000"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 font-mono focus:border-indigo-500 focus:outline-hidden"
+                  className={`${inputClass} font-bold font-mono`}
                 />
               </div>
             </div>
 
-            {/* Quick Court Presets */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[10px] text-slate-400 font-medium">Gợi ý sân:</span>
-              {COURT_PRESETS.map((p, idx) => (
+            {/* Gợi ý sân lấy từ buổi gần nhất, không còn danh sách cứng */}
+            {defaults?.courtName && defaults.courtName !== courtName && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] text-slate-400 font-medium">Buổi gần nhất:</span>
                 <button
-                  key={idx}
                   type="button"
-                  onClick={() => setCourtName(p)}
-                  className={`rounded-lg border px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
-                    courtName === p
-                      ? 'border-indigo-400 bg-indigo-50 text-indigo-700 font-semibold'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-                  }`}
+                  onClick={() => setCourtName(defaults.courtName)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
-                  {p}
+                  {defaults.courtName}
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1">
@@ -302,14 +317,19 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 value={courtPayerId}
                 onChange={(e) => setCourtPayerId(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                aria-invalid={!!errors.courtPayer}
+                className={`${inputClass} ${errors.courtPayer ? 'border-rose-400' : ''}`}
               >
+                <option value="">-- Chọn người trả tiền sân --</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} {m.isPermanent === false ? '(Vãng lai)' : ''}
                   </option>
                 ))}
               </select>
+              {errors.courtPayer && (
+                <p className="mt-1 text-[11px] font-semibold text-rose-600">{errors.courtPayer}</p>
+              )}
             </div>
           </div>
 
@@ -333,7 +353,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1">
                   <button
                     type="button"
-                    onClick={() => setShuttlecockCount(Math.max(0, shuttlecockCount - 1))}
+                    onClick={() => setCount(shuttlecockCount - 1)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
                   >
                     <Minus className="h-3 w-3" />
@@ -341,13 +361,14 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                   <input
                     type="number"
                     min={0}
-                    value={shuttlecockCount}
-                    onChange={(e) => setShuttlecockCount(Math.max(0, parseInt(e.target.value) || 0))}
+                    value={shuttlecockCountInput}
+                    onChange={(e) => setShuttlecockCountInput(e.target.value)}
+                    onBlur={() => setCount(shuttlecockCount)}
                     className="w-full text-center font-mono text-sm font-bold text-slate-900 focus:outline-hidden"
                   />
                   <button
                     type="button"
-                    onClick={() => setShuttlecockCount(shuttlecockCount + 1)}
+                    onClick={() => setCount(shuttlecockCount + 1)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
@@ -364,11 +385,11 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                   type="text"
                   value={shuttlecockPriceInput}
                   onChange={(e) => setShuttlecockPriceInput(e.target.value)}
-                  placeholder="25000"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 font-mono focus:border-indigo-500 focus:outline-hidden"
+                  placeholder="Đơn giá 1 quả"
+                  className={`${inputClass} font-mono`}
                 />
                 <div className="flex gap-1 mt-1">
-                  {[22000, 25000, 27000, 30000].map((pr) => (
+                  {SHUTTLE_PRICE_CHIPS.map((pr) => (
                     <button
                       key={pr}
                       type="button"
@@ -389,8 +410,9 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 <select
                   value={shuttlecockPayerId}
                   onChange={(e) => setShuttlecockPayerId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+                  className={inputClass}
                 >
+                  <option value="">-- Như người trả tiền sân --</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
@@ -398,6 +420,33 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Ghi đè tổng tiền cầu (nếu chủ sân tính trọn gói) */}
+            <div className="space-y-2 border-t border-slate-200/70 pt-2">
+              <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={overrideShuttleTotal}
+                  onChange={(e) => {
+                    setOverrideShuttleTotal(e.target.checked);
+                    if (e.target.checked && !shuttleTotalInput) {
+                      setShuttleTotalInput(String(shuttlecockCount * numShuttlePrice));
+                    }
+                  }}
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                Nhập thẳng tổng tiền cầu (thay cho số quả × đơn giá)
+              </label>
+              {overrideShuttleTotal && (
+                <input
+                  type="text"
+                  value={shuttleTotalInput}
+                  onChange={(e) => setShuttleTotalInput(e.target.value)}
+                  placeholder="VD: 100k, 100000"
+                  className={`${inputClass} font-mono sm:w-1/3`}
+                />
+              )}
             </div>
           </div>
 
@@ -417,26 +466,63 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                   value={drinkFeeInput}
                   onChange={(e) => setDrinkFeeInput(e.target.value)}
                   placeholder="0 (nếu không có)"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 font-mono focus:border-indigo-500 focus:outline-hidden"
+                  className={`${inputClass} font-mono`}
                 />
               </div>
 
+              {/* Người trả tiền nước chỉ có nghĩa khi thực sự có tiền nước */}
+              {numDrinkFee > 0 && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                    Người trả tiền nước
+                  </label>
+                  <select
+                    value={drinkPayerId}
+                    onChange={(e) => setDrinkPayerId(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">-- Chọn người trả tiền nước --</option>
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                  Người trả tiền nước
+                  Phụ phí khác (đ)
                 </label>
-                <select
-                  value={drinkPayerId}
-                  onChange={(e) => setDrinkPayerId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden"
-                >
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value={otherFeeInput}
+                  onChange={(e) => setOtherFeeInput(e.target.value)}
+                  placeholder="0 (nếu không có)"
+                  className={`${inputClass} font-mono`}
+                />
               </div>
+
+              {numOtherFee > 0 && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                    Người trả phụ phí
+                  </label>
+                  <select
+                    value={otherFeePayerId}
+                    onChange={(e) => setOtherFeePayerId(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">-- Chọn người trả phụ phí --</option>
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
@@ -458,58 +544,31 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 >
                   Tất cả ({members.length})
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSelectPermanentOnly}
-                  className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50 cursor-pointer"
-                >
-                  Cố định ({members.filter((m) => m.isPermanent !== false).length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickGuestInput(!showQuickGuestInput)}
-                  className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-indigo-700 cursor-pointer"
-                >
-                  <UserPlus className="h-3 w-3" />
-                  + Thêm Khách
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Guest Add Form */}
-            {showQuickGuestInput && (
-              <div className="rounded-xl border border-indigo-200 bg-white p-3 space-y-2 animate-fade-in">
-                <span className="text-[11px] font-bold text-indigo-900 block">
-                  Thêm người đánh vãng lai hôm nay:
-                </span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={quickGuestName}
-                    onChange={(e) => setQuickGuestName(e.target.value)}
-                    placeholder="Nhập tên khách vãng lai (VD: Hoàng bạn Tuấn)..."
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddQuickGuest();
-                      }
-                    }}
-                  />
+                {/* "Cố định" chỉ khác "Tất cả" khi nhóm có khách vãng lai */}
+                {hasGuests && (
                   <button
                     type="button"
-                    onClick={handleAddQuickGuest}
-                    className="rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition-colors"
+                    onClick={handleSelectPermanentOnly}
+                    className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50 cursor-pointer"
                   >
-                    Thêm & Điểm Danh
+                    Cố định ({permanentCount})
                   </button>
-                </div>
+                )}
               </div>
-            )}
+            </div>
 
             <p className="text-[11px] text-slate-500">
               Chỉ những ai <strong className="text-indigo-600">tích chọn có mặt</strong> hôm nay mới cùng chia tiền sân ({formatVND(numCourtFee)}) và tiền cầu ({formatVND(totalShuttleFee)}). Ai vắng thì không phải chịu!
             </p>
+
+            {attendeeHint && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
+                {attendeeHint}
+              </p>
+            )}
+            {errors.attendees && (
+              <p className="text-[11px] font-semibold text-rose-600">{errors.attendees}</p>
+            )}
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-48 overflow-y-auto pt-1">
               {members.map((m) => {
@@ -572,86 +631,39 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
               </span>
             </div>
           </div>
+
+          {errors.submit && (
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+              {errors.submit}
+            </p>
+          )}
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-3">
-          {/* Delete Button inside modal if editing an existing session */}
-          {initialData && onDelete ? (
-            <button
-              type="button"
-              id="delete-daily-session-btn"
-              onClick={() => setIsDeleteConfirmOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 hover:text-rose-800 transition-colors cursor-pointer"
-            >
-              <Trash2 className="h-4 w-4 text-rose-600" />
-              Xóa Buổi Đánh
-            </button>
-          ) : (
-            <div></div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
-            >
-              Hủy
-            </button>
-            <button
-              type="button"
-              id="submit-daily-session-btn"
-              onClick={handleSubmit}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-indigo-700 transition-colors cursor-pointer"
-            >
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            form="daily-session-form"
+            id="submit-daily-session-btn"
+            disabled={isSaving}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-indigo-700 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
               <Check className="h-4 w-4" />
-              {initialData ? 'Lưu Thay Đổi' : 'Lưu Buổi Đánh'}
-            </button>
-          </div>
+            )}
+            {isSaving ? 'Đang lưu...' : initialData ? 'Lưu Thay Đổi' : 'Lưu Buổi Đánh'}
+          </button>
         </div>
       </div>
-
-      {/* Validation Error Dialog */}
-      {validationError && (
-        <ConfirmDialog
-          isOpen={true}
-          type="warning"
-          title="Thông Tin Chưa Đầy Đủ"
-          message={validationError}
-          confirmText="Đã hiểu"
-          cancelText="Đóng"
-          onConfirm={() => setValidationError(null)}
-          onCancel={() => setValidationError(null)}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      {isDeleteConfirmOpen && initialData && (
-        <ConfirmDialog
-          isOpen={true}
-          type="danger"
-          title="Xác Nhận Xóa Buổi Đánh Cầu?"
-          message={
-            <span>
-              Bạn có chắc chắn muốn xóa buổi đánh ngày{' '}
-              <strong className="text-slate-900">
-                {initialData.date.split('-').slice(1).reverse().join('/')}
-              </strong>{' '}
-              tại <strong className="text-slate-900">{initialData.courtName}</strong>?
-            </span>
-          }
-          details={[
-            `Tổng chi phí: ${formatVND(totalSessionCost)}`,
-            `Có ${initialData.attendeeIds?.length || 0} thành viên đã điểm danh`,
-            'Số tiền quyết toán của các thành viên sẽ được cập nhật lại ngay lập tức',
-          ]}
-          confirmText="Xác nhận xóa"
-          cancelText="Giữ lại buổi này"
-          onConfirm={handleDeleteConfirmed}
-          onCancel={() => setIsDeleteConfirmOpen(false)}
-        />
-      )}
     </div>
   );
 };

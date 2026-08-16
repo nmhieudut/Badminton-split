@@ -6,8 +6,15 @@ import type {
   Transfer,
 } from './types';
 
-/** Chênh lệch nhỏ hơn ngưỡng này không đáng sinh một lần chuyển khoản. */
-const NGUONG_BO_QUA = 500;
+/**
+ * Chênh lệch nhỏ hơn ngưỡng này không đáng sinh một lần chuyển khoản.
+ *
+ * Mọi nơi hiển thị "còn nợ / được nhận / đã đủ" đều phải dùng chung hằng số
+ * này. Trước đây bảng quyết toán dùng 100 còn báo cáo Zalo dùng 500, nên người
+ * có số dư 300 đồng hiện là còn nợ trên bảng nhưng "ĐÃ ĐỦ" trong báo cáo gửi
+ * lên nhóm, mà lại không có giao dịch nào được sinh ra cho họ.
+ */
+export const NGUONG_BO_QUA = 500;
 
 export function calculateSettlement(input: SettlementInput): SettlementOutput {
   const { members, dailySessions, expenses } = input;
