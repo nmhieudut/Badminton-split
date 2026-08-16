@@ -47,7 +47,13 @@
 | `app/actions/*.ts` | Server Actions cho mọi thao tác ghi |
 | `lib/storage.ts` | Tải ảnh QR lên Supabase Storage, sinh signed URL |
 
-**Xóa:** `server.ts`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/lib/api.ts`, `src/utils/storage.ts`, `src/utils/settlement.ts`, `src/components/VietQrModal.tsx`, `src/components/MemberManagerModal.tsx`.
+**Xóa:** `server.ts`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/lib/api.ts`, `src/utils/storage.ts`, `src/utils/settlement.ts`, `src/types.ts`, `src/components/VietQrModal.tsx`, `src/components/MemberManagerModal.tsx`, `src/components/BackupRestoreModal.tsx`.
+
+Ba component bị xóa hẳn, mỗi cái một lý do:
+
+- `MemberManagerModal.tsx` — bản sao 1038 dòng gần như nguyên vẹn của `MemberView.tsx`, không được import ở bất kỳ đâu.
+- `VietQrModal.tsx` — gọi dịch vụ bên thứ ba `img.vietqr.io`, mà thiết kế đã bỏ mọi lời gọi ra ngoài.
+- `BackupRestoreModal.tsx` — phục vụ sao lưu/khôi phục localStorage và nút nạp dữ liệu mẫu; cả ba đều vô nghĩa khi server là nguồn dữ liệu duy nhất. Sao lưu giờ là việc của database.
 
 **Chuyển và sửa:** `src/components/*` sang `components/*`, gỡ phần tự tính toán và các trường ngân hàng.
 

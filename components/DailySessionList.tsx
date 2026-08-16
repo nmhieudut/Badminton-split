@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import {
   Calendar,
@@ -8,59 +10,46 @@ import {
   Users,
   Grid,
   List,
-  CheckCircle2,
-  XCircle,
-  Sparkles,
-  ArrowRight,
-  TrendingUp,
   Award,
   CalendarDays,
 } from 'lucide-react';
-import { DailySession, Member } from '../types';
-import { formatVND, getMemberColor } from '../utils/settlement';
+import type { ViewDailySession, ViewMember } from '../lib/view-types';
+import { formatVND } from '../lib/money';
+import { getMemberColor } from '../lib/categories';
 import { CalendarView } from './CalendarView';
 import { ConfirmDialog } from './ConfirmDialog';
 
 interface DailySessionListProps {
-  sessions: DailySession[];
-  members: Member[];
-  monthKey?: string;
-  onAddSession: (datePreset?: string) => void;
-  onEditSession: (session: DailySession) => void;
+  monthKey: string;
+  sessions: ViewDailySession[];
+  members: ViewMember[];
+  onAddSession: (dateStr?: string) => void;
+  onEditSession: (session: ViewDailySession) => void;
   onDeleteSession: (sessionId: string) => void;
-  onDuplicateSession: (session: DailySession) => void;
-  onMonthChange?: (newMonthKey: string) => void;
-  onOpenYearMonthPicker?: () => void;
+  onDuplicateSession: (session: ViewDailySession) => void;
+}
+
+/** Tiền cầu của một buổi: ưu tiên tổng tiền nhập tay, nếu không thì số quả × đơn giá. */
+function shuttleTotal(s: ViewDailySession): number {
+  return s.shuttlecockTotalFee ?? s.shuttlecockCount * s.shuttlecockPricePerItem;
+}
+
+function sessionTotal(s: ViewDailySession): number {
+  return s.courtFee + shuttleTotal(s) + s.drinkFee + s.otherFee;
 }
 
 export const DailySessionList: React.FC<DailySessionListProps> = ({
+  monthKey,
   sessions,
   members,
-  monthKey,
   onAddSession,
   onEditSession,
   onDeleteSession,
   onDuplicateSession,
-  onMonthChange,
-  onOpenYearMonthPicker,
 }) => {
   const [viewMode, setViewMode] = useState<'calendar' | 'cards' | 'matrix'>('calendar');
   const [selectedCourtFilter, setSelectedCourtFilter] = useState<string>('all');
-  const [sessionToDelete, setSessionToDelete] = useState<DailySession | null>(null);
-
-  // Calculate totals
-  const totalCourtFee = sessions.reduce((acc, s) => acc + (s.courtFee || 0), 0);
-  const totalShuttlecockCount = sessions.reduce((acc, s) => acc + (s.shuttlecockCount || 0), 0);
-  const totalShuttleFee = sessions.reduce((acc, s) => {
-    return (
-      acc +
-      (s.shuttlecockTotalFee !== undefined
-        ? s.shuttlecockTotalFee
-        : (s.shuttlecockCount || 0) * (s.shuttlecockPricePerItem || 25000))
-    );
-  }, 0);
-  const totalDrinkFee = sessions.reduce((acc, s) => acc + (s.drinkFee || 0) + (s.otherFee || 0), 0);
-  const grandTotal = totalCourtFee + totalShuttleFee + totalDrinkFee;
+  const [sessionToDelete, setSessionToDelete] = useState<ViewDailySession | null>(null);
 
   // Unique courts for filter
   const courts = Array.from(new Set(sessions.map((s) => s.courtName))).filter(Boolean);

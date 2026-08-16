@@ -1,22 +1,14 @@
-import React, { useState } from 'react';
-import {
-  X,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle2,
-  PlusCircle,
-  TrendingUp,
-  Sparkles,
-} from 'lucide-react';
-import { MonthSession } from '../types';
-import { formatVND } from '../utils/settlement';
+'use client';
+
+import React, { useState, useTransition } from 'react';
+import type { Route } from 'next';
+import { useRouter } from 'next/navigation';
+import { X, Calendar, ChevronLeft, ChevronRight, PlusCircle, Loader2 } from 'lucide-react';
+import { createMonth } from '../app/actions/months';
 
 interface YearMonthPickerModalProps {
-  sessions: MonthSession[];
   currentMonthKey: string; // e.g. '2026-08'
-  onSelectMonthKey: (monthKey: string) => void;
-  onOpenCustomNewMonthModal: () => void;
+  existingMonthKeys: string[];
   onClose: () => void;
 }
 
@@ -36,14 +28,15 @@ const MONTH_NAMES = [
 ];
 
 export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
-  sessions,
   currentMonthKey,
-  onSelectMonthKey,
-  onOpenCustomNewMonthModal,
+  existingMonthKeys,
   onClose,
 }) => {
-  // Extract active year and month
-  const [activeYearStr, activeMonthStr] = currentMonthKey.split('-');
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+
+  const [activeYearStr] = currentMonthKey.split('-');
   const [selectedYear, setSelectedYear] = useState<number>(
     parseInt(activeYearStr, 10) || new Date().getFullYear()
   );
@@ -53,26 +46,20 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
   const realMonth = realToday.getMonth() + 1;
   const realTodayKey = `${realYear}-${String(realMonth).padStart(2, '0')}`;
 
-  // Find all sessions for the selected year
-  const sessionsByMonthKey: Record<string, MonthSession> = {};
-  sessions.forEach((s) => {
-    if (s.monthKey) {
-      sessionsByMonthKey[s.monthKey] = s;
+  const existing = new Set(existingMonthKeys);
+
+  const goToMonth = (monthKey: string) => {
+    if (isPending) return;
+    if (existing.has(monthKey)) {
+      router.push(`/${monthKey}` as Route);
+      onClose();
+      return;
     }
-  });
-
-  const handlePrevYear = () => {
-    setSelectedYear((prev) => prev - 1);
-  };
-
-  const handleNextYear = () => {
-    setSelectedYear((prev) => prev + 1);
-  };
-
-  const handleSelectMonth = (monthIndex: number) => {
-    const monthKey = `${selectedYear}-${String(monthIndex + 1).padStart(2, '0')}`;
-    onSelectMonthKey(monthKey);
-    onClose();
+    // Kỳ chưa tồn tại: tạo mới rồi server action tự chuyển trang.
+    setPendingKey(monthKey);
+    startTransition(async () => {
+      await createMonth(monthKey);
+    });
   };
 
   return (
@@ -111,7 +98,7 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handlePrevYear}
+              onClick={() => setSelectedYear((prev) => prev - 1)}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               title="Năm trước"
             >
@@ -122,7 +109,7 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
             </span>
             <button
               type="button"
-              onClick={handleNextYear}
+              onClick={() => setSelectedYear((prev) => prev + 1)}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               title="Năm sau"
             >
@@ -150,9 +137,7 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
               type="button"
               onClick={() => {
                 setSelectedYear(realYear);
-                const monthKey = `${realYear}-${String(realMonth).padStart(2, '0')}`;
-                onSelectMonthKey(monthKey);
-                onClose();
+                goToMonth(realTodayKey);
               }}
               className="rounded-lg bg-indigo-50 border border-indigo-200 px-2.5 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer ml-1"
             >
@@ -169,31 +154,19 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
               const cellMonthKey = `${selectedYear}-${monthNumStr}`;
               const isCurrentActive = cellMonthKey === currentMonthKey;
               const isRealCurrentMonth = cellMonthKey === realTodayKey;
-              const sessionForMonth = sessionsByMonthKey[cellMonthKey];
-
-              // Calculate basic summary if session exists
-              const dailyCount = sessionForMonth?.dailySessions?.length || 0;
-              const totalCost = sessionForMonth
-                ? (sessionForMonth.dailySessions || []).reduce((acc, s) => {
-                    const shuttle =
-                      s.shuttlecockTotalFee !== undefined
-                        ? s.shuttlecockTotalFee
-                        : (s.shuttlecockCount || 0) * (s.shuttlecockPricePerItem || 25000);
-                    return acc + (s.courtFee || 0) + shuttle + (s.drinkFee || 0) + (s.otherFee || 0);
-                  }, 0) +
-                  (sessionForMonth.expenses || []).reduce((acc, e) => acc + (e.amount || 0), 0)
-                : 0;
+              const monthExists = existing.has(cellMonthKey);
+              const isCreating = isPending && pendingKey === cellMonthKey;
 
               return (
                 <div
-                  key={idx}
-                  onClick={() => handleSelectMonth(idx)}
+                  key={cellMonthKey}
+                  onClick={() => goToMonth(cellMonthKey)}
                   className={`group relative flex flex-col justify-between rounded-2xl border p-3.5 transition-all cursor-pointer ${
                     isCurrentActive
                       ? 'border-indigo-600 bg-indigo-50/50 shadow-xs ring-2 ring-indigo-500/20'
-                      : sessionForMonth && dailyCount > 0
-                      ? 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50/70 shadow-2xs'
-                      : 'border-dashed border-slate-200 bg-slate-50/40 text-slate-400 hover:border-indigo-300 hover:bg-white'
+                      : monthExists
+                        ? 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50/70 shadow-2xs'
+                        : 'border-dashed border-slate-200 bg-slate-50/40 text-slate-400 hover:border-indigo-300 hover:bg-white'
                   }`}
                 >
                   {/* Top indicator & Title */}
@@ -219,26 +192,22 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
                     )}
                   </div>
 
-                  {/* Middle / Bottom content: session count or prompt to activate */}
+                  {/* Bottom content */}
                   <div className="mt-3 border-t border-slate-100 pt-2 text-xs">
-                    {sessionForMonth && dailyCount > 0 ? (
-                      <div className="space-y-0.5">
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
-                          <span>🏸 {dailyCount} buổi đánh</span>
-                        </div>
-                        <div className="font-mono text-[11px] font-bold text-indigo-600">
-                          {formatVND(totalCost)}
-                        </div>
+                    {isCreating ? (
+                      <div className="text-[11px] text-indigo-600 flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Đang tạo kỳ...</span>
                       </div>
-                    ) : sessionForMonth ? (
+                    ) : monthExists ? (
                       <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300"></span>
-                        <span>Đã tạo kỳ (0 buổi)</span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                        <span>Đã tạo kỳ</span>
                       </div>
                     ) : (
                       <div className="text-[11px] text-slate-400 group-hover:text-indigo-600 transition-colors flex items-center gap-1">
                         <PlusCircle className="h-3 w-3" />
-                        <span>Bấm để vào tháng</span>
+                        <span>Bấm để tạo kỳ</span>
                       </div>
                     )}
                   </div>
@@ -251,21 +220,11 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
         {/* Footer info & CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 bg-slate-50 px-6 py-3 text-xs">
           <div className="text-slate-500 text-[11px]">
-            💡 Bấm vào bất kỳ tháng nào để tự động chuyển kỳ. Danh sách thành viên cố định sẽ được tự động giữ nguyên.
+            💡 Bấm vào bất kỳ tháng nào để tự động chuyển kỳ. Danh sách thành viên cố định sẽ được tự
+            động giữ nguyên.
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenCustomNewMonthModal();
-              }}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-              Tùy chỉnh kỳ mới...
-            </button>
             <button
               type="button"
               onClick={onClose}
