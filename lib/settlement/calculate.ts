@@ -19,6 +19,18 @@ export const NGUONG_BO_QUA = 500;
 export function calculateSettlement(input: SettlementInput): SettlementOutput {
   const { members, dailySessions, expenses } = input;
 
+  const memberIds = new Set(members.map((m) => m.id));
+
+  /**
+   * Bỏ id không thuộc danh sách thành viên của kỳ.
+   *
+   * Buổi đánh có thể còn lưu id của người đã bị gỡ khỏi kỳ, hoặc id lấy nhầm
+   * từ kỳ khác. Nếu chia tiền cho cả những id đó thì phần của họ không cộng
+   * được vào ai và biến mất khỏi tổng — 200.000 chia cho 11 id trong khi kỳ
+   * chỉ có 5 người thì 109.090 đồng bốc hơi, và tổng số dư ròng khác 0.
+   */
+  const chiGiuNguoiTrongKy = (ids: string[]) => ids.filter((id) => memberIds.has(id));
+
   const zero = () => new Map(members.map((m) => [m.id, 0]));
   const paid = zero();
   const share = zero();
@@ -52,9 +64,10 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     if (s.drinkFee > 0) add(paid, s.drinkPayerId, s.drinkFee);
     if (s.otherFee > 0) add(paid, s.otherFeePayerId, s.otherFee);
 
-    // Buổi không ghi người có mặt thì coi như cả nhóm cùng chịu.
-    const attendees =
-      s.attendeeIds.length > 0 ? s.attendeeIds : members.map((m) => m.id);
+    // Buổi không ghi người có mặt — hoặc chỉ ghi toàn id lạ — thì coi như cả
+    // nhóm cùng chịu.
+    const coMat = chiGiuNguoiTrongKy(s.attendeeIds);
+    const attendees = coMat.length > 0 ? coMat : members.map((m) => m.id);
     if (attendees.length === 0) continue;
 
     const court = allocate(s.courtFee, attendees);
@@ -78,10 +91,9 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     totalExpenses += e.amount;
     add(paid, e.paidById, e.amount);
 
+    const thamGia = chiGiuNguoiTrongKy(e.participantIds);
     const participants =
-      e.splitType === 'all' || e.participantIds.length === 0
-        ? members.map((m) => m.id)
-        : e.participantIds;
+      e.splitType === 'all' || thamGia.length === 0 ? members.map((m) => m.id) : thamGia;
     if (participants.length === 0) continue;
 
     const parts = allocate(e.amount, participants);

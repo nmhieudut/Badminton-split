@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lt } from 'drizzle-orm';
 import { db } from './index';
 import {
   dailySessions,
@@ -162,10 +162,16 @@ export async function getSessionDefaults(monthKey: string) {
   const source = latest ?? (await latestSessionBefore(monthKey));
   if (!source) return null;
 
+  // Chỉ giữ những người CÓ TRONG kỳ đang xem. Buổi nguồn có thể thuộc kỳ trước
+  // với danh sách thành viên khác hẳn; lấy nguyên si sẽ điền sẵn id của người
+  // không thuộc kỳ này, và tiền chia cho họ sẽ biến mất khỏi tổng.
   const attendees = await db
     .select({ memberId: sessionAttendees.memberId })
     .from(sessionAttendees)
-    .where(eq(sessionAttendees.sessionId, source.id));
+    .innerJoin(monthMembers, eq(monthMembers.memberId, sessionAttendees.memberId))
+    .where(
+      and(eq(sessionAttendees.sessionId, source.id), eq(monthMembers.monthId, month.id))
+    );
 
   return {
     courtName: source.courtName,

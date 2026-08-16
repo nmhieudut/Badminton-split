@@ -3,7 +3,7 @@
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '../../db';
-import { dailySessions, months, sessionAttendees } from '../../db/schema';
+import { dailySessions, monthMembers, months, sessionAttendees } from '../../db/schema';
 
 export interface DailySessionInput {
   id?: string;
@@ -29,7 +29,24 @@ export async function saveDailySession(monthKey: string, input: DailySessionInpu
   if (!month) throw new Error('Không tìm thấy tháng');
   if (input.attendeeIds.length === 0) throw new Error('Buổi đánh phải có ít nhất một người');
 
-  const { id, attendeeIds, ...fields } = input;
+  // Chỉ nhận điểm danh của người thuộc kỳ này. Không có bước lọc này thì id lạ
+  // sẽ lọt vào bảng, tiền chia cho họ không cộng được cho ai và biến mất khỏi
+  // tổng quyết toán mà không có dấu hiệu nào.
+  const trongKy = new Set(
+    (
+      await db
+        .select({ memberId: monthMembers.memberId })
+        .from(monthMembers)
+        .where(eq(monthMembers.monthId, month.id))
+    ).map((r) => r.memberId)
+  );
+
+  const attendeeIds = [...new Set(input.attendeeIds)].filter((id) => trongKy.has(id));
+  if (attendeeIds.length === 0) {
+    throw new Error('Buổi đánh phải có ít nhất một người thuộc kỳ này');
+  }
+
+  const { id, attendeeIds: _boQua, ...fields } = input;
 
   await db.transaction(async (tx) => {
     let sessionId = id;

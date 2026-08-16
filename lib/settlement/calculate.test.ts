@@ -161,3 +161,75 @@ describe('calculateSettlement', () => {
     expect(calculateSettlement(input)).toEqual(calculateSettlement(input));
   });
 });
+
+describe('điểm danh mồ côi — id không thuộc danh sách thành viên', () => {
+  // Buổi đánh có thể chứa id của người đã bị gỡ khỏi kỳ, hoặc id lấy nhầm từ
+  // kỳ khác qua getSessionDefaults. Trước đây allocate() chia cho toàn bộ id
+  // trong attendeeIds nhưng chỉ cộng được cho người có trong members, nên phần
+  // của các id lạ biến mất: 200.000 chia 11 chỉ cộng về 90.910.
+  const members = [
+    { id: 'a', name: 'An' },
+    { id: 'b', name: 'Bình' },
+  ];
+
+  const buoi = {
+    id: 'ds1',
+    date: '2026-08-16',
+    courtFee: 100000,
+    courtPayerId: 'a',
+    shuttlecockCount: 4,
+    shuttlecockPricePerItem: 25000,
+    shuttlecockTotalFee: null,
+    shuttlecockPayerId: 'a',
+    drinkFee: 0,
+    drinkPayerId: null,
+    otherFee: 0,
+    otherFeePayerId: null,
+    attendeeIds: ['a', 'b', 'nguoi-la-1', 'nguoi-la-2'],
+  };
+
+  it('không để thất thoát đồng nào khi có id lạ', () => {
+    const out = calculateSettlement({ members, dailySessions: [buoi], expenses: [] });
+    expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(200000);
+  });
+
+  it('tổng số dư ròng vẫn bằng không', () => {
+    const out = calculateSettlement({ members, dailySessions: [buoi], expenses: [] });
+    expect(out.rows.reduce((s, r) => s + r.netBalance, 0)).toBe(0);
+  });
+
+  it('chia đều cho những người thật sự có trong kỳ', () => {
+    const out = calculateSettlement({ members, dailySessions: [buoi], expenses: [] });
+    expect(out.rows.find((r) => r.memberId === 'a')!.totalShare).toBe(100000);
+    expect(out.rows.find((r) => r.memberId === 'b')!.totalShare).toBe(100000);
+  });
+
+  it('bỏ hết id lạ thì coi như buổi không ghi điểm danh, chia cho cả nhóm', () => {
+    const out = calculateSettlement({
+      members,
+      dailySessions: [{ ...buoi, attendeeIds: ['nguoi-la-1', 'nguoi-la-2'] }],
+      expenses: [],
+    });
+    expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(200000);
+  });
+
+  it('khoản chi cũng bỏ qua id lạ mà không thất thoát', () => {
+    const out = calculateSettlement({
+      members,
+      dailySessions: [],
+      expenses: [
+        {
+          id: 'e1',
+          title: 'Nước',
+          category: 'drink',
+          amount: 90000,
+          paidById: 'a',
+          splitType: 'custom',
+          participantIds: ['a', 'nguoi-la-1'],
+        },
+      ],
+    });
+    expect(out.rows.reduce((s, r) => s + r.expenseShare, 0)).toBe(90000);
+    expect(out.rows.find((r) => r.memberId === 'a')!.expenseShare).toBe(90000);
+  });
+});

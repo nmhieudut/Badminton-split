@@ -1,9 +1,17 @@
 'use server';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '../../db';
-import { members, monthMembers, months } from '../../db/schema';
+import {
+  dailySessions,
+  expenseParticipants,
+  expenses,
+  members,
+  monthMembers,
+  months,
+  sessionAttendees,
+} from '../../db/schema';
 import { uploadQrFromFile } from '../../lib/storage';
 
 export interface MemberInput {
@@ -69,9 +77,51 @@ export async function removeMemberFromMonth(monthKey: string, memberId: string) 
   const [month] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
   if (!month) throw new Error('Không tìm thấy tháng');
 
-  await db
-    .delete(monthMembers)
-    .where(and(eq(monthMembers.monthId, month.id), eq(monthMembers.memberId, memberId)));
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(monthMembers)
+      .where(and(eq(monthMembers.monthId, month.id), eq(monthMembers.memberId, memberId)));
+
+    // Gỡ luôn điểm danh của người này trong các buổi CỦA KỲ NÀY. Để sót lại thì
+    // buổi đánh vẫn tính họ vào số người chia tiền dù họ không còn trong kỳ.
+    // Các kỳ khác không bị đụng tới.
+    const sessionIds = (
+      await tx
+        .select({ id: dailySessions.id })
+        .from(dailySessions)
+        .where(eq(dailySessions.monthId, month.id))
+    ).map((r) => r.id);
+
+    if (sessionIds.length) {
+      await tx
+        .delete(sessionAttendees)
+        .where(
+          and(
+            inArray(sessionAttendees.sessionId, sessionIds),
+            eq(sessionAttendees.memberId, memberId)
+          )
+        );
+    }
+
+    // Tương tự với các khoản chi của kỳ này.
+    const expenseIds = (
+      await tx
+        .select({ id: expenses.id })
+        .from(expenses)
+        .where(eq(expenses.monthId, month.id))
+    ).map((r) => r.id);
+
+    if (expenseIds.length) {
+      await tx
+        .delete(expenseParticipants)
+        .where(
+          and(
+            inArray(expenseParticipants.expenseId, expenseIds),
+            eq(expenseParticipants.memberId, memberId)
+          )
+        );
+    }
+  });
 
   revalidatePath(`/${monthKey}`, 'layout');
 }
