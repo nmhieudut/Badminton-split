@@ -4,6 +4,7 @@ import { Navbar } from '../../components/Navbar';
 import { getSessionUser, getVaiTro } from '../../lib/auth/session';
 import type { DongAdmin } from '../../components/AdminsModal';
 import type { DongSan } from '../../components/CourtsModal';
+import { EmptyMonth } from '../../components/EmptyMonth';
 
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -18,8 +19,6 @@ export default async function MonthLayout({
   if (!MONTH_KEY.test(monthKey)) notFound();
 
   const data = await getMonthData(monthKey);
-  if (!data) notFound();
-
   const monthKeys = await listMonthKeys();
 
   const [user, vaiTro] = await Promise.all([getSessionUser(), getVaiTro()]);
@@ -46,15 +45,17 @@ export default async function MonthLayout({
 
   // Chỉ admin mới mở được màn hình quản lý sân, nên khách khỏi tốn truy vấn.
   const danhSachSan: DongSan[] = isAdmin ? await listCourts() : [];
-  const unsettledCount = data.settlement.transfers.filter((t) => !t.isSettled).length;
+  const unsettledCount = data
+    ? data.settlement.transfers.filter((t) => !t.isSettled).length
+    : 0;
 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar
         monthKey={monthKey}
-        month={data.month}
+        month={data?.month ?? null}
         monthKeys={monthKeys}
-        memberCount={data.members.length}
+        memberCount={data?.members.length ?? 0}
         unsettledCount={unsettledCount}
         email={user?.email ?? null}
         ten={user?.ten ?? null}
@@ -70,7 +71,12 @@ export default async function MonthLayout({
         dung cuối trang; từ lg trở lên thanh đó biến mất nên không cần chừa.
       */}
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-3.5 pb-24 pt-4 sm:space-y-5 sm:px-6 sm:pt-5 lg:pb-10">
-        {children}
+        {/*
+          Tháng chưa có kỳ là trạng thái bình thường, không phải lỗi — nên hiện
+          lời mời tạo kỳ thay vì trang 404, và không render children (các trang
+          tab đều cần dữ liệu của kỳ).
+        */}
+        {data ? children : <EmptyMonth monthKey={monthKey} isAdmin={isAdmin} />}
       </main>
 
       <footer className="hidden border-t border-slate-200/80 bg-white py-3.5 text-center text-xs text-slate-400 lg:block">

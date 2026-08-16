@@ -26,7 +26,8 @@ import { BadmintonEstimatorModal } from './BadmintonEstimatorModal';
 
 interface NavbarProps {
   monthKey: string;
-  month: ViewMonth;
+  /** Null khi tháng chưa có kỳ nào — vẫn điều hướng được, chỉ không sửa được. */
+  month: ViewMonth | null;
   monthKeys: string[];
   memberCount: number;
   /** Số giao dịch chưa chuyển khoản — hiện thành chấm báo trên tab Quyết toán. */
@@ -127,7 +128,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const prevKey = shiftMonthKey(monthKey, -1);
   const nextKey = shiftMonthKey(monthKey, 1);
 
-  const monthLabel = month.title || `Tháng ${month.monthKey}`;
+  // Tháng chưa có kỳ thì vẫn phải hiện nhãn để người dùng biết mình đang ở đâu.
+  const [namNhan, thangNhan] = monthKey.split('-');
+  const monthLabel = month?.title || `Tháng ${thangNhan}/${namNhan}`;
 
   return (
     <>
@@ -229,6 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {isToolsOpen && (
               <div className="absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 text-sm shadow-xl">
+                  {isAdmin && month && (
                   <button
                     type="button"
                     onClick={() => {
@@ -240,6 +244,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <Edit3 className="h-4 w-4 text-slate-500" />
                     <span>Sửa hoặc xóa kỳ này</span>
                   </button>
+                  )}
 
                   <button
                     type="button"
@@ -342,7 +347,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         />
       )}
 
-      {isEditOpen && (
+      {isEditOpen && month && (
         <EditMonthModal
           month={month}
           canDelete={monthKeys.length > 1}
