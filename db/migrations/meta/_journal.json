@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786884979322,
+      "tag": "0000_icy_pyro",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786885012046,
+      "tag": "0001_enable_rls_on_all_tables",
+      "breakpoints": true
+    }
+  ]
+}
