@@ -5,7 +5,6 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import {
-  Calculator,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -22,7 +21,6 @@ import { AdminsModal, type DongNguoiDung } from './AdminsModal';
 import { CourtsModal, type DongSan } from './CourtsModal';
 import { YearMonthPickerModal } from './YearMonthPickerModal';
 import { EditMonthModal } from './EditMonthModal';
-import { BadmintonEstimatorModal } from './BadmintonEstimatorModal';
 
 interface NavbarProps {
   monthKey: string;
@@ -77,7 +75,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
   const [isAdminsOpen, setIsAdminsOpen] = useState(false);
   const [isCourtsOpen, setIsCourtsOpen] = useState(false);
   const bocTienIch = useRef<HTMLDivElement>(null);
@@ -217,7 +214,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               isSuperAdmin={isSuperAdmin}
             />
 
-          {/* Tiện ích */}
+          {/*
+            Menu tiện ích chỉ còn các mục cần quyền, nên khách không có gì để
+            mở. Ẩn luôn cả nút thay vì để nó bung ra một hộp trống.
+          */}
+          {isAdmin && (
           <div className="relative shrink-0" ref={bocTienIch}>
             <button
               type="button"
@@ -245,18 +246,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Sửa hoặc xóa kỳ này</span>
                   </button>
                   )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsToolsOpen(false);
-                      setIsEstimatorOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
-                  >
-                    <Calculator className="h-4 w-4 text-amber-500" />
-                    <span>Dự toán kỳ tới</span>
-                  </button>
 
                   {isAdmin && (
                     <button
@@ -291,6 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
           </div>
+          )}
           </div>
         </div>
       </header>
@@ -361,13 +351,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {isAdminsOpen && (
         <AdminsModal danhSach={danhSachAdmin} onClose={() => setIsAdminsOpen(false)} />
-      )}
-
-      {isEstimatorOpen && (
-        <BadmintonEstimatorModal
-          memberCount={memberCount}
-          onClose={() => setIsEstimatorOpen(false)}
-        />
       )}
     </>
   );
