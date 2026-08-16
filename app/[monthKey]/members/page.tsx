@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getMonthData } from '../../../db/queries';
 import { getQrSignedUrl } from '../../../lib/storage';
 import { MemberView } from '../../../components/MemberView';
+import { getVaiTro } from '../../../lib/auth/session';
 
 export default async function Page({ params }: { params: Promise<{ monthKey: string }> }) {
   const { monthKey } = await params;
@@ -12,12 +13,16 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
     data.members.map(async (m) => ({ ...m, qrUrl: await getQrSignedUrl(m.qrImagePath) }))
   );
 
+  const vaiTro = await getVaiTro();
+  const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
+
   return (
     <MemberView
       monthKey={monthKey}
       members={membersWithQr}
       settlementRows={data.settlement.rows}
       sessionCount={data.dailySessions.length}
+      isAdmin={isAdmin}
     />
   );
 }

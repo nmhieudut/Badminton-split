@@ -29,6 +29,8 @@ interface DailySessionListProps {
   onDuplicateSession: (session: ViewDailySession) => void;
   /** Quyết toán đã tính sẵn ở server — chỉ để hiển thị, không tính lại ở đây. */
   settlementRows: ViewSettlementRow[];
+  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  isAdmin: boolean;
 }
 
 /** Tiền cầu của một buổi: ưu tiên tổng tiền nhập tay, nếu không thì số quả × đơn giá. */
@@ -49,6 +51,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
   onDeleteSession,
   onDuplicateSession,
   settlementRows,
+  isAdmin,
 }) => {
   const [viewMode, setViewMode] = useState<'calendar' | 'cards' | 'matrix'>('calendar');
   const [selectedCourtFilter, setSelectedCourtFilter] = useState<string>('all');
@@ -141,14 +144,16 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
           )}
         </div>
 
-        <button
-          id="add-daily-session-btn"
-          onClick={() => onAddSession()}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
-        >
-          <Plus className="h-4 w-4" />
-          Ghi Buổi Đánh Mới
-        </button>
+        {isAdmin && (
+          <button
+            id="add-daily-session-btn"
+            onClick={() => onAddSession()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            Ghi Buổi Đánh Mới
+          </button>
+        )}
       </div>
 
       {/* Main Content Area */}
@@ -164,6 +169,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
             if (target) setSessionToDelete(target);
           }}
           onDuplicateSession={onDuplicateSession}
+          isAdmin={isAdmin}
         />
       ) : sessions.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-12 text-center">
@@ -174,13 +180,15 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
           <p className="mx-auto mt-1.5 max-w-md text-xs text-slate-500">
             Hãy bắt đầu ghi chép các buổi đánh thực tế (ngày đánh, sân nào, dùng mấy trái cầu và ai có mặt) để cuối tháng chia tiền chuẩn xác nhất!
           </p>
-          <button
-            onClick={() => onAddSession()}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Ghi Buổi Đầu Tiên
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => onAddSession()}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Ghi Buổi Đầu Tiên
+            </button>
+          )}
         </div>
       ) : viewMode === 'cards' ? (
         /* Cards View */
@@ -290,30 +298,32 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="mt-4 flex items-center justify-end gap-1.5 border-t border-slate-100 pt-3">
-                  <button
-                    onClick={() => onDuplicateSession(session)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
-                    title="Nhân bản buổi này — mở form để chọn ngày mới"
-                  >
-                    <Copy className="h-3.5 w-3.5 text-slate-400" />
-                    Nhân bản
-                  </button>
-                  <button
-                    onClick={() => onEditSession(session)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    Sửa
-                  </button>
-                  <button
-                    onClick={() => setSessionToDelete(session)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Xóa
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className="mt-4 flex items-center justify-end gap-1.5 border-t border-slate-100 pt-3">
+                    <button
+                      onClick={() => onDuplicateSession(session)}
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                      title="Nhân bản buổi này — mở form để chọn ngày mới"
+                    >
+                      <Copy className="h-3.5 w-3.5 text-slate-400" />
+                      Nhân bản
+                    </button>
+                    <button
+                      onClick={() => onEditSession(session)}
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Sửa
+                    </button>
+                    <button
+                      onClick={() => setSessionToDelete(session)}
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Xóa
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

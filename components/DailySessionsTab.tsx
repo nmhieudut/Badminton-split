@@ -18,6 +18,8 @@ interface DailySessionsTabProps {
   sessions: ViewDailySession[];
   defaults: SessionDefaults;
   settlementRows: ViewSettlementRow[];
+  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  isAdmin: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
   sessions,
   defaults,
   settlementRows,
+  isAdmin,
 }) => {
   const [modal, setModal] = useState<ModalState | null>(null);
 
@@ -61,6 +64,7 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
         sessions={sessions}
         members={members}
         settlementRows={settlementRows}
+        isAdmin={isAdmin}
         onAddSession={(dateStr) => setModal({ mode: 'create', session: null, defaultDate: dateStr })}
         onEditSession={(session) => setModal({ mode: 'edit', session })}
         onDeleteSession={(sessionId) => {

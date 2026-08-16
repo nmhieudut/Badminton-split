@@ -17,6 +17,8 @@ interface MemberViewProps {
   members: ViewMemberWithQr[];
   settlementRows: ViewSettlementRow[];
   sessionCount: number;
+  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  isAdmin: boolean;
 }
 
 export const MemberView: React.FC<MemberViewProps> = ({
@@ -24,6 +26,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
   members,
   settlementRows,
   sessionCount,
+  isAdmin,
 }) => {
   const [activeTab, setActiveTab] = useState<'list' | 'single' | 'bulk'>('list');
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -172,7 +175,8 @@ export const MemberView: React.FC<MemberViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Điều hướng giữa các tab */}
+      {/* Điều hướng giữa các tab — chỉ có ý nghĩa khi được phép ghi */}
+      {isAdmin && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs">
         <div className="flex items-center gap-1.5 overflow-x-auto">
           <button
@@ -219,6 +223,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
           </button>
         </div>
       </div>
+      )}
 
       {activeTab === 'list' && (
         <div className="space-y-4">
@@ -326,23 +331,25 @@ export const MemberView: React.FC<MemberViewProps> = ({
                   tiền minh bạch.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={handleStartAdd}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition-colors cursor-pointer"
-                >
-                  <UserPlus className="h-3.5 w-3.5" />+ Thêm thành viên
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('bulk')}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                  Dán nhanh danh sách Zalo
-                </button>
-              </div>
+              {isAdmin && (
+                <div className="flex flex-wrap gap-2 justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleStartAdd}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition-colors cursor-pointer"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />+ Thêm thành viên
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('bulk')}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                    Dán nhanh danh sách Zalo
+                  </button>
+                </div>
+              )}
             </div>
           ) : filteredMembers.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-xs text-slate-500">
@@ -361,6 +368,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
                   onEdit={() => handleStartEdit(m)}
                   onRemove={() => handleRequestRemove(m)}
                   onPreviewQr={() => setPreviewQrMember(m)}
+                  isAdmin={isAdmin}
                 />
               ))}
             </div>
@@ -368,7 +376,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
         </div>
       )}
 
-      {activeTab === 'single' && (
+      {isAdmin && activeTab === 'single' && (
         <MemberFormPanel
           key={formKey}
           editingMember={editingMember}
@@ -379,7 +387,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
         />
       )}
 
-      {activeTab === 'bulk' && (
+      {isAdmin && activeTab === 'bulk' && (
         <BulkAddPanel
           existingNames={members.map((m) => m.name)}
           isPending={isPending}

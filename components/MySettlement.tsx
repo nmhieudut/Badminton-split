@@ -16,6 +16,8 @@ interface MySettlementProps {
   transfers: ViewTransfer[];
   /** Signed URL ảnh QR theo memberId; null nếu người đó chưa tải lên. */
   qrUrls: Record<string, string | null>;
+  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  isAdmin: boolean;
 }
 
 export const MySettlement: React.FC<MySettlementProps> = ({
@@ -24,6 +26,7 @@ export const MySettlement: React.FC<MySettlementProps> = ({
   rows,
   transfers,
   qrUrls,
+  isAdmin,
 }) => {
   const [meId, setMeId] = useState<string | null>(initialMeId);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -144,15 +147,17 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                   </p>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => danhDau(t)}
-                  disabled={pendingKey === key}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:w-auto"
-                >
-                  <Check className="h-4 w-4" />
-                  {pendingKey === key ? 'Đang lưu...' : 'Tôi đã chuyển'}
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => danhDau(t)}
+                    disabled={pendingKey === key}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:w-auto"
+                  >
+                    <Check className="h-4 w-4" />
+                    {pendingKey === key ? 'Đang lưu...' : 'Tôi đã chuyển'}
+                  </button>
+                )}
               </div>
             );
           })}
@@ -169,7 +174,8 @@ export const MySettlement: React.FC<MySettlementProps> = ({
             {formatVND(conChoNhan.reduce((s, t) => s + t.amount, 0))}
           </p>
           <p className="mt-1 text-sm text-slate-600">
-            còn {conChoNhan.length} người chưa chuyển. Tích khi tiền đã về tài khoản.
+            còn {conChoNhan.length} người chưa chuyển.
+            {isAdmin ? ' Tích khi tiền đã về tài khoản.' : ''}
           </p>
 
           <ul className="mt-4 space-y-2">
@@ -187,14 +193,16 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                     <span className="font-mono text-sm font-bold text-slate-900">
                       {formatVND(t.amount)}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => danhDau(t)}
-                      disabled={pendingKey === key}
-                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
-                    >
-                      {pendingKey === key ? '...' : 'Đã nhận'}
-                    </button>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => danhDau(t)}
+                        disabled={pendingKey === key}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        {pendingKey === key ? '...' : 'Đã nhận'}
+                      </button>
+                    )}
                   </span>
                 </li>
               );

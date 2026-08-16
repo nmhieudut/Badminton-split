@@ -19,6 +19,8 @@ interface CalendarViewProps {
   onEditSession: (session: ViewDailySession) => void;
   onDeleteSession: (sessionId: string) => void;
   onDuplicateSession: (session: ViewDailySession) => void;
+  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  isAdmin: boolean;
 }
 
 function shuttleTotal(s: ViewDailySession): number {
@@ -44,6 +46,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onAddSessionOnDate,
   onEditSession,
   onDeleteSession,
+  isAdmin,
 }) => {
   // Tháng đang xem nằm trong URL — không có state, không có điều hướng ở đây.
   const [yearRaw, monthRaw] = monthKey.split('-').map(Number);
@@ -133,7 +136,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Nhấn ngày bất kỳ để ghi buổi đánh hoặc xem chi tiết
+              {isAdmin
+                ? 'Nhấn ngày bất kỳ để ghi buổi đánh hoặc xem chi tiết'
+                : 'Xem lịch các buổi đánh trong tháng'}
             </p>
           </div>
         </div>
@@ -175,18 +180,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             {calendarCells.map((cell, idx) => {
               const hasSessions = cell.sessions.length > 0;
               const isToday = cell.dateStr === todayStr;
+              // Không đủ quyền thì ô ngày là ô trơn: bấm vào cũng không có gì xảy ra,
+              // nên không giả vờ bấm được.
+              const cellClickable = isAdmin && cell.isCurrentMonth;
 
               return (
                 <div
                   key={idx}
                   // Chạm/bấm vào ô ngày là mở form ghi buổi đánh cho đúng ngày đó.
-                  onClick={
-                    cell.isCurrentMonth ? () => onAddSessionOnDate(cell.dateStr) : undefined
-                  }
-                  role={cell.isCurrentMonth ? 'button' : undefined}
-                  tabIndex={cell.isCurrentMonth ? 0 : undefined}
+                  onClick={cellClickable ? () => onAddSessionOnDate(cell.dateStr) : undefined}
+                  role={cellClickable ? 'button' : undefined}
+                  tabIndex={cellClickable ? 0 : undefined}
                   onKeyDown={
-                    cell.isCurrentMonth
+                    cellClickable
                       ? (e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -196,16 +202,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       : undefined
                   }
                   title={
-                    cell.isCurrentMonth
-                      ? `Ghi buổi đánh ngày ${cell.dayNum}/${month + 1}`
-                      : undefined
+                    cellClickable ? `Ghi buổi đánh ngày ${cell.dayNum}/${month + 1}` : undefined
                   }
                   className={`group relative min-h-[105px] sm:min-h-[120px] p-2 transition-all flex flex-col justify-between ${
                     !cell.isCurrentMonth
                       ? 'bg-slate-50/30 text-slate-300'
                       : hasSessions
-                      ? 'bg-indigo-50/15 cursor-pointer'
-                      : 'bg-white hover:bg-slate-50/50 cursor-pointer'
+                      ? `bg-indigo-50/15${cellClickable ? ' cursor-pointer' : ''}`
+                      : `bg-white${cellClickable ? ' hover:bg-slate-50/50 cursor-pointer' : ''}`
                   }`}
                 >
                   {/* Cell Header: Date number & Add button */}
@@ -224,7 +228,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       {cell.dayNum}
                     </span>
 
-                    {cell.isCurrentMonth && (
+                    {cellClickable && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -251,7 +255,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           onClick={(e) => e.stopPropagation()}
                           className="group/item relative rounded-xl border border-indigo-200/70 bg-white p-1.5 shadow-2xs hover:border-indigo-400 hover:shadow-xs transition-all"
                         >
-                          <div onClick={() => onEditSession(s)} className="cursor-pointer">
+                          <div
+                            onClick={isAdmin ? () => onEditSession(s) : undefined}
+                            className={isAdmin ? 'cursor-pointer' : undefined}
+                          >
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-bold text-[11px] text-slate-900 truncate max-w-[80px] sm:max-w-[100px]">
                                 {s.courtName.replace('Sân ', '')}
@@ -272,36 +279,38 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           </div>
 
                           {/* Quick action buttons */}
-                          <div className="mt-1 flex items-center justify-end gap-1 border-t border-slate-100 pt-1">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEditSession(s);
-                              }}
-                              className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors cursor-pointer"
-                              title="Chỉnh sửa buổi này"
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteSession(s.id);
-                              }}
-                              className="rounded p-0.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Xóa buổi đánh này"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
+                          {isAdmin && (
+                            <div className="mt-1 flex items-center justify-end gap-1 border-t border-slate-100 pt-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditSession(s);
+                                }}
+                                className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors cursor-pointer"
+                                title="Chỉnh sửa buổi này"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteSession(s.id);
+                                }}
+                                className="rounded p-0.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                                title="Xóa buổi đánh này"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
 
                     {/* Empty day prompt */}
-                    {!hasSessions && cell.isCurrentMonth && (
+                    {!hasSessions && cellClickable && (
                       <div className="flex h-full min-h-[40px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-1 text-[10px] font-medium text-slate-400 opacity-60 group-hover:opacity-100 group-hover:border-indigo-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all text-center">
                         <span>+ Đánh sân</span>
                       </div>

@@ -35,6 +35,8 @@ interface SettlementViewProps {
   qrUrls: Record<string, string | null>;
   /** Văn bản báo cáo Zalo dựng sẵn ở server. */
   report: string;
+  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  isAdmin: boolean;
 }
 
 const transferKey = (t: ViewTransfer) => `${t.fromMemberId}::${t.toMemberId}`;
@@ -47,6 +49,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
   sessionCount,
   qrUrls,
   report,
+  isAdmin,
 }) => {
   const [showReport, setShowReport] = useState(false);
   const [openQrKey, setOpenQrKey] = useState<string | null>(null);
@@ -92,6 +95,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
         rows={rows}
         transfers={transfers}
         qrUrls={qrUrls}
+        isAdmin={isAdmin}
       />
 
       {/* Tổng quan các con số của tháng */}
@@ -352,28 +356,48 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
 
                   {/* Đánh dấu đã chuyển khoản — khóa theo cặp người, không theo số tiền. */}
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
-                    <button
-                      type="button"
-                      id={`toggle-settled-${key}`}
-                      onClick={() => handleToggleSettled(t)}
-                      disabled={isBusy}
-                      className="flex items-center gap-2 text-xs font-medium cursor-pointer disabled:cursor-wait disabled:opacity-50"
-                    >
-                      {t.isSettled ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-slate-300 hover:text-slate-500" />
-                      )}
-                      <span
-                        className={t.isSettled ? 'text-emerald-700 line-through' : 'text-slate-500'}
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        id={`toggle-settled-${key}`}
+                        onClick={() => handleToggleSettled(t)}
+                        disabled={isBusy}
+                        className="flex items-center gap-2 text-xs font-medium cursor-pointer disabled:cursor-wait disabled:opacity-50"
                       >
-                        {isBusy
-                          ? 'Đang lưu...'
-                          : t.isSettled
-                            ? 'Đã thanh toán'
-                            : 'Đánh dấu đã chuyển'}
+                        {t.isSettled ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-slate-300 hover:text-slate-500" />
+                        )}
+                        <span
+                          className={
+                            t.isSettled ? 'text-emerald-700 line-through' : 'text-slate-500'
+                          }
+                        >
+                          {isBusy
+                            ? 'Đang lưu...'
+                            : t.isSettled
+                              ? 'Đã thanh toán'
+                              : 'Đánh dấu đã chuyển'}
+                        </span>
+                      </button>
+                    ) : (
+                      /* Không đủ quyền: vẫn thấy tình trạng, chỉ không đổi được. */
+                      <span className="flex items-center gap-2 text-xs font-medium">
+                        {t.isSettled ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-slate-300" />
+                        )}
+                        <span
+                          className={
+                            t.isSettled ? 'text-emerald-700 line-through' : 'text-slate-500'
+                          }
+                        >
+                          {t.isSettled ? 'Đã thanh toán' : 'Chưa chuyển'}
+                        </span>
                       </span>
-                    </button>
+                    )}
                   </div>
                 </div>
               );

@@ -15,6 +15,8 @@ interface MemberCardProps {
   onEdit: () => void;
   onRemove: () => void;
   onPreviewQr: () => void;
+  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  isAdmin: boolean;
 }
 
 export const MemberCard: React.FC<MemberCardProps> = ({
@@ -26,6 +28,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
   onEdit,
   onRemove,
   onPreviewQr,
+  isAdmin,
 }) => {
   const attendedCount = row?.sessionsAttendedCount ?? 0;
   const netBalance = row?.netBalance ?? 0;
@@ -123,13 +126,15 @@ export const MemberCard: React.FC<MemberCardProps> = ({
                 <span>Xem mã QR</span>
                 <Eye className="h-3 w-3 text-emerald-500" />
               </button>
-              <button
-                type="button"
-                onClick={onEdit}
-                className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
-              >
-                Đổi QR
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
+                >
+                  Đổi QR
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -140,40 +145,44 @@ export const MemberCard: React.FC<MemberCardProps> = ({
                   {member.name} qua app.
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={onEdit}
-                className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer"
-              >
-                + Tải ảnh QR lên
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                >
+                  + Tải ảnh QR lên
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
 
       {/* Hành động */}
-      <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
-        <button
-          type="button"
-          onClick={onEdit}
-          disabled={busy}
-          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Edit2 className="h-3 w-3" />
-          Sửa
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          disabled={busy}
-          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Gỡ khỏi kỳ này"
-        >
-          <Trash2 className="h-3 w-3" />
-          Gỡ khỏi kỳ này
-        </button>
-      </div>
+      {isAdmin && (
+        <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={busy}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Edit2 className="h-3 w-3" />
+            Sửa
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={busy}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Gỡ khỏi kỳ này"
+          >
+            <Trash2 className="h-3 w-3" />
+            Gỡ khỏi kỳ này
+          </button>
+        </div>
+      )}
     </div>
   );
 };
