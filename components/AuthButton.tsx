@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname } from 'next/navigation';
-import { LogIn, LogOut, ShieldCheck } from 'lucide-react';
+import { CalendarCog, LogIn, LogOut, MapPin, ShieldCheck, UserCog } from 'lucide-react';
 import { signOut } from '../app/actions/auth';
 import { LoginModal } from './LoginModal';
 
@@ -12,6 +12,11 @@ export interface AuthButtonProps {
   anhDaiDien: string | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  /** Chỉ hiện mục sửa kỳ khi tháng đang xem thật sự có kỳ. */
+  coTheSuaKy: boolean;
+  onOpenEditMonth: () => void;
+  onOpenCourts: () => void;
+  onOpenAdmins: () => void;
 }
 
 export function AuthButton({
@@ -20,6 +25,10 @@ export function AuthButton({
   anhDaiDien,
   isAdmin,
   isSuperAdmin,
+  coTheSuaKy,
+  onOpenEditMonth,
+  onOpenCourts,
+  onOpenAdmins,
 }: AuthButtonProps) {
   const [moModal, setMoModal] = useState(false);
   const [moMenu, setMoMenu] = useState(false);
@@ -145,6 +154,53 @@ export function AuthButton({
               </p>
             )}
           </div>
+
+          {isAdmin && (
+            <div className="border-t border-slate-100 py-1.5">
+              {coTheSuaKy && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMoMenu(false);
+                    onOpenEditMonth();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                >
+                  <CalendarCog className="h-4 w-4 text-slate-500" />
+                  <span>Sửa hoặc xóa kỳ này</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMoMenu(false);
+                  onOpenCourts();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+              >
+                <MapPin className="h-4 w-4 text-indigo-500" />
+                <span>Quản lý sân</span>
+              </button>
+
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMoMenu(false);
+                    onOpenAdmins();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                >
+                  <UserCog className="h-4 w-4 text-emerald-600" />
+                  <span>Quản lý quyền</span>
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="border-t border-slate-100 pt-1.5">
             <button

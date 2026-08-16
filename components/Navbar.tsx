@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
@@ -11,7 +11,6 @@ import {
   Edit3,
   HandCoins,
   MapPin,
-  MoreVertical,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -72,38 +71,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   danhSachSan,
 }) => {
   const pathname = usePathname();
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAdminsOpen, setIsAdminsOpen] = useState(false);
   const [isCourtsOpen, setIsCourtsOpen] = useState(false);
-  const bocTienIch = useRef<HTMLDivElement>(null);
 
-  /*
-    Đóng menu bằng listener trên document thay vì lớp phủ `fixed inset-0`.
-    Header có backdrop-blur, mà backdrop-filter tạo containing block cho con
-    cháu position:fixed — lớp phủ như vậy chỉ trùm đúng cái header, nên bấm
-    vào nội dung trang sẽ không đóng được menu.
-  */
-  useEffect(() => {
-    if (!isToolsOpen) return;
-
-    const ngoai = (e: MouseEvent) => {
-      if (bocTienIch.current && !bocTienIch.current.contains(e.target as Node)) {
-        setIsToolsOpen(false);
-      }
-    };
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsToolsOpen(false);
-    };
-
-    document.addEventListener('mousedown', ngoai);
-    document.addEventListener('keydown', esc);
-    return () => {
-      document.removeEventListener('mousedown', ngoai);
-      document.removeEventListener('keydown', esc);
-    };
-  }, [isToolsOpen]);
 
   const base = `/${monthKey}`;
 
@@ -212,75 +184,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               anhDaiDien={anhDaiDien}
               isAdmin={isAdmin}
               isSuperAdmin={isSuperAdmin}
+              coTheSuaKy={month !== null}
+              onOpenEditMonth={() => setIsEditOpen(true)}
+              onOpenCourts={() => setIsCourtsOpen(true)}
+              onOpenAdmins={() => setIsAdminsOpen(true)}
             />
-
-          {/*
-            Menu tiện ích chỉ còn các mục cần quyền, nên khách không có gì để
-            mở. Ẩn luôn cả nút thay vì để nó bung ra một hộp trống.
-          */}
-          {isAdmin && (
-          <div className="relative shrink-0" ref={bocTienIch}>
-            <button
-              type="button"
-              id="nav-tools-menu-btn"
-              onClick={() => setIsToolsOpen(!isToolsOpen)}
-              aria-label="Tiện ích"
-              aria-expanded={isToolsOpen}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-
-            {isToolsOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 text-sm shadow-xl">
-                  {isAdmin && month && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsToolsOpen(false);
-                      setIsEditOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
-                  >
-                    <Edit3 className="h-4 w-4 text-slate-500" />
-                    <span>Sửa hoặc xóa kỳ này</span>
-                  </button>
-                  )}
-
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsToolsOpen(false);
-                        setIsCourtsOpen(true);
-                      }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
-                    >
-                      <MapPin className="h-4 w-4 text-indigo-500" />
-                      <span>Quản lý sân</span>
-                    </button>
-                  )}
-
-                  {isSuperAdmin && (
-                    <>
-                      <div className="my-1 border-t border-slate-100" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsToolsOpen(false);
-                          setIsAdminsOpen(true);
-                        }}
-                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
-                      >
-                        <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                        <span>Quản lý quyền</span>
-                      </button>
-                    </>
-                  )}
-              </div>
-            )}
-          </div>
-          )}
           </div>
         </div>
       </header>
