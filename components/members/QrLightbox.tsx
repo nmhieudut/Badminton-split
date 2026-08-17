@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { QrSaveButton } from '../QrSaveButton';
 
 interface QrLightboxProps {
   name: string;
@@ -34,6 +35,11 @@ export const QrLightbox: React.FC<QrLightboxProps> = ({ name, url, onClose }) =>
         alt={`QR ${name}`}
         className="max-h-72 w-full object-contain rounded-xl bg-white p-2 border border-slate-200"
       />
+      {/* App ngân hàng cho tải ảnh QR lên, nên phải lưu được về máy. */}
+      <div className="flex justify-center">
+        <QrSaveButton url={url} tenNguoi={name} />
+      </div>
+
       <button
         type="button"
         onClick={onClose}

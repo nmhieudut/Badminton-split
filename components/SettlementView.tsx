@@ -21,6 +21,7 @@ import { formatVND } from '../lib/money';
 import { NGUONG_BO_QUA } from '../lib/settlement/calculate';
 import type { ViewMonth, ViewSettlement, ViewTransfer } from '../lib/view-types';
 import { MySettlement } from './MySettlement';
+import { QrSaveButton } from './QrSaveButton';
 import { ZaloReportModal } from './ZaloReportModal';
 
 interface SettlementViewProps {
@@ -354,6 +355,9 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                           <p className="mt-2 text-center text-[11px] text-slate-400">
                             Quét để chuyển {formatVND(t.amount)} cho {t.toMemberName}
                           </p>
+                          <div className="mt-2 flex justify-center">
+                            <QrSaveButton url={qrUrl} tenNguoi={t.toMemberName} />
+                          </div>
                         </>
                       ) : (
                         <p className="text-center text-[11px] font-medium text-amber-700">

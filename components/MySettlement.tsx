@@ -5,6 +5,7 @@ import { Check, RefreshCw, ScanLine, UserRound } from 'lucide-react';
 import { toggleTransferSettled } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import type { ViewSettlementRow, ViewTransfer } from '../lib/view-types';
+import { QrSaveButton } from './QrSaveButton';
 import { COOKIE_TOI_LA, HAN_COOKIE_NGAY } from '../lib/me-cookie';
 
 
@@ -144,6 +145,10 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                       <ScanLine className="h-3.5 w-3.5" />
                       Mở app ngân hàng và quét mã này
                     </figcaption>
+                    {/* App ngân hàng cho tải ảnh QR lên, nên phải lưu được về máy. */}
+                    <div className="mt-2">
+                      <QrSaveButton url={qr} tenNguoi={t.toMemberName} />
+                    </div>
                   </figure>
                 ) : (
                   <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
