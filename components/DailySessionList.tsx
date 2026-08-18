@@ -51,7 +51,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
   settlementRows,
   isAdmin,
 }) => {
-  const [viewMode, setViewMode] = useState<'calendar' | 'cards' | 'matrix'>('cards');
+  const [viewMode, setViewMode] = useState<'calendar' | 'cards' | 'matrix'>('calendar');
   const [selectedCourtFilter, setSelectedCourtFilter] = useState<string>('all');
   const [sessionToDelete, setSessionToDelete] = useState<ViewDailySession | null>(null);
 
@@ -96,8 +96,8 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
         >
           {(
             [
-              { mode: 'cards', label: `Danh sách (${sessions.length})`, id: 'view-mode-cards-btn' },
               { mode: 'calendar', label: 'Lịch tháng', id: 'view-mode-calendar-btn' },
+              { mode: 'cards', label: `Danh sách (${sessions.length})`, id: 'view-mode-cards-btn' },
               { mode: 'matrix', label: 'Ma trận', id: 'view-mode-matrix-btn' },
             ] as const
           ).map((tab) => (
