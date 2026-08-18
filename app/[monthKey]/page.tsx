@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { getMonthData, getSessionDefaults, listActiveCourts } from '../../db/queries';
 import { DailySessionsTab } from '../../components/DailySessionsTab';
 import { getRole } from '../../lib/auth/session';
@@ -6,7 +5,7 @@ import { getRole } from '../../lib/auth/session';
 export default async function Page({ params }: { params: Promise<{ monthKey: string }> }) {
   const { monthKey } = await params;
   const data = await getMonthData(monthKey);
-  if (!data) notFound();
+  if (!data) return null;
 
   const defaults = await getSessionDefaults(monthKey);
   const courts = await listActiveCourts();

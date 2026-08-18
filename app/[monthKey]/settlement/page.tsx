@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers';
-import { notFound } from 'next/navigation';
 import { getMonthData } from '../../../db/queries';
 import { getQrSignedUrl } from '../../../lib/storage';
 import { generateZaloReport } from '../../../lib/settlement/report';
@@ -9,7 +8,7 @@ import { ME_COOKIE } from '../../../lib/me-cookie';
 export default async function Page({ params }: { params: Promise<{ monthKey: string }> }) {
   const { monthKey } = await params;
   const data = await getMonthData(monthKey);
-  if (!data) notFound();
+  if (!data) return null;
 
   const qrPairs = await Promise.all(
     data.members.map(async (m) => [m.id, await getQrSignedUrl(m.qrImagePath)] as const)
@@ -33,7 +32,6 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
   return (
     <SettlementView
       monthKey={monthKey}
-      month={data.month}
       meId={meId}
       settlement={data.settlement}
       sessionCount={data.dailySessions.length}
