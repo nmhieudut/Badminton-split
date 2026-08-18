@@ -19,7 +19,7 @@ interface CalendarViewProps {
   onEditSession: (session: ViewDailySession) => void;
   onDeleteSession: (sessionId: string) => void;
   onDuplicateSession: (session: ViewDailySession) => void;
-  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
 }
 
@@ -48,7 +48,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onDeleteSession,
   isAdmin,
 }) => {
-  // Tháng đang xem nằm trong URL — không có state, không có điều hướng ở đây.
+  // The month being viewed comes from the URL — no state, no navigation in here.
   const [yearRaw, monthRaw] = monthKey.split('-').map(Number);
   const now = new Date();
   const year = Number.isFinite(yearRaw) ? yearRaw : now.getFullYear();
@@ -120,7 +120,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   return (
     <div id="calendar-view-container" className="space-y-4">
-      {/* Calendar Header (điều hướng tháng do Navbar đảm nhiệm) */}
+      {/* Calendar Header (month navigation is handled by the Navbar) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-2xs">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
@@ -180,14 +180,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             {calendarCells.map((cell, idx) => {
               const hasSessions = cell.sessions.length > 0;
               const isToday = cell.dateStr === todayStr;
-              // Không đủ quyền thì ô ngày là ô trơn: bấm vào cũng không có gì xảy ra,
-              // nên không giả vờ bấm được.
+              // Without write access a day cell is inert: clicking it does nothing,
+              // so don't pretend it is clickable.
               const cellClickable = isAdmin && cell.isCurrentMonth;
 
               return (
                 <div
                   key={idx}
-                  // Chạm/bấm vào ô ngày là mở form ghi buổi đánh cho đúng ngày đó.
+                  // Tapping/clicking a day cell opens the session form for that exact date.
                   onClick={cellClickable ? () => onAddSessionOnDate(cell.dateStr) : undefined}
                   role={cellClickable ? 'button' : undefined}
                   tabIndex={cellClickable ? 0 : undefined}
@@ -256,9 +256,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           className="group/item relative rounded-xl border border-indigo-200/70 bg-white p-1.5 shadow-2xs hover:border-indigo-400 hover:shadow-xs transition-all"
                         >
                           {/*
-                            Ai cũng bấm được vào buổi đánh. Admin thì mở form
-                            sửa, người khác mở màn hình xem chi tiết — việc
-                            phân nhánh do DailySessionsTab lo.
+                            Anyone can click a session. Admins get the edit form,
+                            everyone else gets the read-only detail view — that
+                            branching is handled by DailySessionsTab.
                           */}
                           <div
                             onClick={() => onEditSession(s)}

@@ -27,13 +27,13 @@ interface DailySessionListProps {
   onEditSession: (session: ViewDailySession) => void;
   onDeleteSession: (sessionId: string) => void;
   onDuplicateSession: (session: ViewDailySession) => void;
-  /** Quyết toán đã tính sẵn ở server — chỉ để hiển thị, không tính lại ở đây. */
+  /** Settlement already computed on the server — display only, never recomputed here. */
   settlementRows: ViewSettlementRow[];
-  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
 }
 
-/** Tiền cầu của một buổi: ưu tiên tổng tiền nhập tay, nếu không thì số quả × đơn giá. */
+/** Shuttlecock cost of a session: a hand-entered total wins, otherwise count × unit price. */
 function shuttleTotal(s: ViewDailySession): number {
   return s.shuttlecockTotalFee ?? s.shuttlecockCount * s.shuttlecockPricePerItem;
 }
@@ -65,8 +65,9 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
     return s.courtName === selectedCourtFilter;
   });
 
-  // Thống kê điểm danh. Số buổi đếm tại chỗ vì nó phụ thuộc bộ lọc đang chọn;
-  // còn tiền thì lấy nguyên từ quyết toán của server, không tính lại.
+  // Attendance stats. Session counts are computed here because they depend on the
+  // filter currently selected; the money is taken as-is from the server settlement
+  // and never recomputed.
   const shareByMember = new Map(settlementRows.map((r) => [r.memberId, r.totalShare]));
 
   const memberAttendanceStats = members.map((m) => {
@@ -206,10 +207,11 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                 className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-indigo-300 hover:shadow-md transition-all"
               >
                 {/*
-                  Bấm vào thân thẻ để mở buổi đánh. Admin ra form sửa, người
-                  khác ra màn hình xem chi tiết — nhánh do DailySessionsTab lo.
-                  Không có chỗ bấm này thì khách chỉ thấy được phần tóm tắt,
-                  vì hàng nút bên dưới đã bị ẩn.
+                  Clicking the card body opens the session. Admins get the edit
+                  form, everyone else gets the read-only detail view — that
+                  branching is handled by DailySessionsTab. Without this click
+                  target guests would only ever see the summary, because the row
+                  of buttons below is hidden from them.
                 */}
                 <div
                   onClick={() => onEditSession(session)}

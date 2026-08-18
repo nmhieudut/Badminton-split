@@ -27,16 +27,16 @@ import { ZaloReportModal } from './ZaloReportModal';
 interface SettlementViewProps {
   monthKey: string;
   month: ViewMonth;
-  /** Thành viên đang dùng máy này, đọc từ cookie ở server. */
+  /** The member using this device, read from the cookie on the server. */
   meId: string | null;
-  /** Đã được tính trọn vẹn ở server — component này chỉ hiển thị. */
+  /** Fully computed on the server — this component only renders it. */
   settlement: ViewSettlement;
   sessionCount: number;
-  /** Signed URL ảnh QR theo memberId, có thể null nếu thành viên chưa tải lên. */
+  /** Signed QR image URL keyed by memberId; may be null if the member has not uploaded one. */
   qrUrls: Record<string, string | null>;
-  /** Văn bản báo cáo Zalo dựng sẵn ở server. */
+  /** Zalo report text, pre-built on the server. */
   report: string;
-  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  /** Whether the viewer has write access. The real gate lives in the Server Action. */
 }
 
 const transferKey = (t: ViewTransfer) => `${t.fromMemberId}::${t.toMemberId}`;
@@ -53,7 +53,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
   const [showReport, setShowReport] = useState(false);
   const [openQrKey, setOpenQrKey] = useState<string | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const [loi, setLoi] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const { rows, transfers, totalCost, totalCourtCost, totalShuttleCost } = settlement;
@@ -66,7 +66,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
     const willComplete = !t.isSettled && completedTransfersCount + 1 === transfers.length;
 
     setPendingKey(key);
-    setLoi(null);
+    setError(null);
     startTransition(async () => {
       try {
         await toggleTransferSettled(monthKey, t.fromMemberId, t.toMemberId);
@@ -74,13 +74,13 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
           try {
             confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
           } catch {
-            // Không có canvas thì bỏ qua hiệu ứng.
+            // No canvas available, so skip the effect.
           }
         }
       } catch (e) {
-        // Không có nhánh này thì lỗi biến mất im lặng: người dùng bấm, không
-        // có gì xảy ra, và không biết vì sao.
-        setLoi(e instanceof Error ? e.message : 'Không lưu được. Thử lại giúp.');
+        // Without this branch the error vanishes silently: the user taps,
+        // nothing happens, and they have no idea why.
+        setError(e instanceof Error ? e.message : 'Không lưu được. Thử lại giúp.');
       } finally {
         setPendingKey(null);
       }
@@ -89,7 +89,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
 
   return (
     <div id="settlement-view-container" className="space-y-8">
-      {/* Tổng quan các con số của tháng */}
+      {/* Overview of the month's numbers */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between text-slate-400">
@@ -139,9 +139,10 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
       </div>
 
       {/*
-        Bảng đối soát — bản trình bày DUY NHẤT của số liệu từng người.
-        Bản cũ còn thêm thẻ "Quyết Toán Cuối Tháng" nền tối lặp lại đúng các số
-        này, khiến trên điện thoại phải cuộn hết danh sách hai lần.
+        The reconciliation table — the ONLY place each person's numbers are
+        presented. The old version also had a dark "Month-End Settlement" card
+        repeating exactly these numbers, which on a phone meant scrolling
+        through the whole list twice.
       */}
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="flex flex-col gap-2 border-b border-slate-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -154,7 +155,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
             </p>
           </div>
 
-          {/* Một lối duy nhất tới báo cáo Zalo: xem trước rồi sao chép trong modal. */}
+          {/* A single path to the Zalo report: preview it, then copy from the modal. */}
           <button
             type="button"
             id="open-zalo-report-btn"
@@ -166,9 +167,9 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
           </button>
         </div>
 
-        {loi && (
+        {error && (
           <p className="border-b border-slate-100 bg-rose-50 px-6 py-2.5 text-xs font-semibold text-rose-700">
-            {loi}
+            {error}
           </p>
         )}
 
@@ -243,9 +244,10 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
       </div>
 
       {/*
-        Việc của người đang cầm máy, đặt ngay trên phần hướng dẫn chuyển tiền —
-        đó là chỗ nó thuộc về. Trước đây khối này nằm trên cùng, nên người chưa
-        chọn tên bị hỏi "Bạn là ai?" trước cả khi thấy bất kỳ con số nào.
+        What the person holding the device has to do, placed right above the
+        transfer instructions — that is where it belongs. This block used to sit
+        at the very top, so anyone who had not picked their name was asked
+        "Who are you?" before seeing a single number.
       */}
       <MySettlement
         monthKey={monthKey}
@@ -255,7 +257,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
         qrUrls={qrUrls}
       />
 
-      {/* Sơ đồ chuyển khoản tối ưu */}
+      {/* Optimized transfer plan */}
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-4">
         <div className="flex flex-col gap-1 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2">
@@ -316,7 +318,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Mã QR của người nhận: ai trong nhóm cũng xem được, không cần hỏi riêng. */}
+                    {/* The recipient's QR code: anyone in the group can view it, no need to ask them privately. */}
                     <button
                       type="button"
                       id={`toggle-qr-btn-${key}`}
@@ -368,10 +370,10 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                   )}
 
                   {/*
-                    Đánh dấu đã chuyển khoản — khóa theo cặp người, không theo
-                    số tiền. Mở cho cả khách chưa đăng nhập: người vừa chuyển
-                    tiền tự tích, bắt họ đăng nhập chỉ để bấm một nút là rào
-                    cản lớn hơn giá trị nó bảo vệ.
+                    Mark as transferred — keyed by the pair of people, not by the
+                    amount. Open to signed-out guests too: whoever just sent the
+                    money ticks it themselves, and forcing them to sign in just to
+                    press one button is a bigger barrier than what it protects.
                   */}
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
                     <button

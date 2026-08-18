@@ -10,14 +10,14 @@ interface DailySessionModalProps {
   members: ViewMember[];
   initialData: ViewDailySession | null;
   defaults: SessionDefaults;
-  /** Sân đang dùng, đổ vào dropdown. Rỗng thì form nhắc thêm sân trước. */
+  /** Courts in use, fed into the dropdown. When empty the form asks the user to add a court first. */
   courts: { id: string; name: string; defaultFee: number }[];
   defaultDate?: string;
   onSave: (input: DailySessionInput) => Promise<void>;
   onClose: () => void;
 }
 
-/** `initialData` khi sửa → `defaults` (buổi gần nhất) khi thêm mới → để trống. */
+/** `initialData` when editing → `defaults` (the most recent session) when adding → empty. */
 function pickText(...values: (string | number | null | undefined)[]): string {
   for (const v of values) {
     if (v !== null && v !== undefined && v !== '') return String(v);
@@ -86,7 +86,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
   const [attendeeHint, setAttendeeHint] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Khi mở lại modal cho một buổi khác (hoặc một ngày khác) thì nạp lại toàn bộ form.
+  // When the modal reopens for a different session (or a different date), reload the whole form.
   useEffect(() => {
     setDate(initialData?.date ?? defaultDate ?? new Date().toISOString().split('T')[0]);
     setCourtName(pickText(initialData?.courtName, defaults?.courtName));
@@ -246,7 +246,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto p-6 space-y-5"
         >
-          {/* 1. Ngày & Sân bãi */}
+          {/* 1. Date & court */}
           <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
             <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <span>🏟️</span> 1. Thông Tin Sân Đánh & Tiền Thuê Sân
@@ -273,22 +273,22 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 <select
                   value={courtName}
                   onChange={(e) => {
-                    const ten = e.target.value;
-                    setCourtName(ten);
-                    // Chọn sân thì điền luôn giá mặc định của sân đó. Buổi đánh
-                    // chép lại con số này, nên sau đó sửa giá sân cũng không
-                    // làm đổi tiền của buổi đã ghi.
-                    const san = courts.find((c) => c.name === ten);
-                    if (san) setCourtFeeInput(String(san.defaultFee));
+                    const name = e.target.value;
+                    setCourtName(name);
+                    // Picking a court fills in that court's default fee. The session
+                    // copies this number, so editing the court's fee later does not
+                    // change the cost of sessions already recorded.
+                    const court = courts.find((c) => c.name === name);
+                    if (court) setCourtFeeInput(String(court.defaultFee));
                   }}
                   aria-invalid={!!errors.courtName}
                   className={`${inputClass} ${errors.courtName ? 'border-rose-400' : ''}`}
                 >
                   <option value="">— Chọn sân —</option>
                   {/*
-                    Sân của buổi đang sửa có thể đã bị tắt hoặc đổi tên; vẫn phải
-                    liệt kê ra, nếu không mở form sửa sẽ thấy ô trống và lưu lại
-                    là mất tên sân cũ.
+                    The court of the session being edited may have been disabled or
+                    renamed; it still has to be listed, otherwise opening the edit
+                    form shows an empty select and saving would lose the old court name.
                   */}
                   {!courts.some((c) => c.name === courtName) && courtName && (
                     <option value={courtName}>{courtName} (không còn trong danh sách)</option>
@@ -348,7 +348,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Cầu Lông Đã Đánh */}
+          {/* 2. Shuttlecocks used */}
           <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
             <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -437,7 +437,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
               </div>
             </div>
 
-            {/* Ghi đè tổng tiền cầu (nếu chủ sân tính trọn gói) */}
+            {/* Override the shuttlecock total (for when the court owner charges a flat rate) */}
             <div className="space-y-2 border-t border-slate-200/70 pt-2">
               <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600 cursor-pointer">
                 <input
@@ -465,7 +465,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
           </div>
 
-          {/* 3. Nước uống & Phụ thu */}
+          {/* 3. Drinks & extra fees */}
           <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
             <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <span>🥤</span> 3. Nước Uống / Phụ Phí Buổi (Tùy chọn)
@@ -485,7 +485,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 />
               </div>
 
-              {/* Người trả tiền nước chỉ có nghĩa khi thực sự có tiền nước */}
+              {/* The drink payer only means anything when there actually is a drink cost */}
               {numDrinkFee > 0 && (
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">
@@ -541,7 +541,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
           </div>
 
-          {/* 4. Điểm danh thành viên có mặt */}
+          {/* 4. Attendance check-in */}
           <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-indigo-100 pb-2">
               <div className="flex items-center gap-1.5">
@@ -559,7 +559,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 >
                   Tất cả ({members.length})
                 </button>
-                {/* "Cố định" chỉ khác "Tất cả" khi nhóm có khách vãng lai */}
+                {/* "Permanent" only differs from "All" when the group has guest members */}
                 {hasGuests && (
                   <button
                     type="button"
@@ -615,7 +615,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
           </div>
 
-          {/* Ghi chú */}
+          {/* Note */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
               Ghi chú thêm cho buổi này

@@ -2,46 +2,47 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const GOC = process.cwd();
+const ROOT = process.cwd();
 
-/** Duyệt đệ quy để lấy mọi component, kể cả trong thư mục con. */
-function allFiles(thuMuc: string): string[] {
-  return readdirSync(thuMuc, { withFileTypes: true }).flatMap((e) => {
-    const duong = join(thuMuc, e.name);
-    if (e.isDirectory()) return allFiles(duong);
-    return e.name.endsWith('.tsx') ? [duong] : [];
+/** Walk recursively so components in subfolders are covered too. */
+function allFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const path = join(dir, e.name);
+    if (e.isDirectory()) return allFiles(path);
+    return e.name.endsWith('.tsx') ? [path] : [];
   });
 }
 
 /**
- * Mọi component gọi Server Action đều phải bắt lỗi.
+ * Every component calling a Server Action has to catch.
  *
- * Không bắt thì lỗi thành unhandled rejection và làm sập cả trang — người dùng
- * mất luôn những gì đang gõ dở. Đây từng xảy ra thật với nút xóa buổi đánh,
- * nút sửa kỳ và nút tạo kỳ: cả ba gọi action mà không có một khối catch nào.
+ * Without a catch the rejection becomes an unhandled promise rejection and
+ * takes the whole page down, losing whatever the user had typed. That happened
+ * for real: deleting a session, editing a period and creating one all called an
+ * action with no catch anywhere in the chain.
  */
 describe('mọi nơi gọi Server Action đều bắt lỗi', () => {
-  const tep = [
-    ...allFiles(join(GOC, 'components')),
-    ...allFiles(join(GOC, 'app')).filter((f) => !f.includes('/actions/')),
+  const files = [
+    ...allFiles(join(ROOT, 'components')),
+    ...allFiles(join(ROOT, 'app')).filter((f) => !f.includes('/actions/')),
   ];
 
-  const goiAction = tep.filter((f) => {
-    const nguon = readFileSync(f, 'utf8');
-    return /from ['"][^'"]*app\/actions\//.test(nguon);
+  const callSites = files.filter((f) => {
+    const source = readFileSync(f, 'utf8');
+    return /from ['"][^'"]*app\/actions\//.test(source);
   });
 
   it('tìm thấy component có gọi Server Action', () => {
-    expect(goiAction.length).toBeGreaterThan(0);
+    expect(callSites.length).toBeGreaterThan(0);
   });
 
-  for (const f of goiAction) {
-    const ten = f.replace(GOC + '/', '');
-    it(`${ten} có bắt lỗi`, () => {
-      const nguon = readFileSync(f, 'utf8');
-      // Hoặc tự bắt, hoặc chỉ nhận action qua prop rồi để nơi khác bắt
-      // (ví dụ Navbar chỉ mở modal, modal mới gọi action).
-      expect(nguon.includes('catch')).toBe(true);
+  for (const f of callSites) {
+    const name = f.replace(ROOT + '/', '');
+    it(`${name} có bắt lỗi`, () => {
+      const source = readFileSync(f, 'utf8');
+      // Either it catches itself, or it only receives the action through a prop
+      // and something else catches (Navbar just opens a modal, for example)., hoặc chỉ nhận action qua prop rồi để nơi khác bắt
+      expect(source.includes('catch')).toBe(true);
     });
   }
 });

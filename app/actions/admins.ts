@@ -7,28 +7,29 @@ import { admins } from '../../db/schema';
 import { getSessionUser, requireSuperAdmin } from '../../lib/auth/session';
 import { isSuperAdminEmail } from '../../lib/auth/admin-emails';
 
-/** Đủ để loại các chuỗi rõ ràng không phải email; không cố bắt mọi trường hợp. */
-const DANG_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Enough to reject strings that clearly aren't emails; not meant to catch every case. */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function addAdmin(email: string) {
   await requireSuperAdmin();
 
-  const chuanHoa = email.trim().toLowerCase();
-  if (!DANG_EMAIL.test(chuanHoa)) {
+  const normalized = email.trim().toLowerCase();
+  if (!EMAIL_PATTERN.test(normalized)) {
     throw new Error('Địa chỉ email không hợp lệ.');
   }
 
-  // Người đã là super admin thì thêm vào bảng cũng vô nghĩa: getRole() luôn
-  // trả super_admin trước khi tra bảng. Báo rõ thay vì ghi một dòng vô dụng.
-  if (isSuperAdminEmail(chuanHoa)) {
+  // Adding someone who is already a super admin to the table is pointless:
+  // getRole() returns super_admin before it ever looks at the table. Say so
+  // clearly instead of writing a useless row.
+  if (isSuperAdminEmail(normalized)) {
     throw new Error('Email này đã là super admin từ cấu hình hệ thống.');
   }
 
-  const nguoiThem = await getSessionUser();
+  const addedByUser = await getSessionUser();
 
   await db
     .insert(admins)
-    .values({ email: chuanHoa, addedBy: nguoiThem?.email ?? null })
+    .values({ email: normalized, addedBy: addedByUser?.email ?? null })
     .onConflictDoNothing();
 
   revalidatePath('/', 'layout');

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 
-/** Bỏ dấu tiếng Việt để tên tệp không bị mã hóa loạn trên máy khác. */
+/** Strip Vietnamese diacritics so the file name is not mangled on other machines. */
 function stripDiacritics(s: string): string {
   return s
     .normalize('NFD')
@@ -16,45 +16,47 @@ function stripDiacritics(s: string): string {
 }
 
 /**
- * Lưu ảnh QR của một người về máy.
+ * Save someone's QR image to the device.
  *
- * Có lý do thực tế: app ngân hàng cho tải ảnh QR lên để quét, nên người dùng
- * cần file nằm sẵn trong máy chứ không chỉ nhìn thấy trên màn hình.
+ * There is a practical reason for this: banking apps let you upload a QR image
+ * to scan it, so the user needs the file sitting on their device, not just
+ * something visible on screen.
  *
- * Trên điện thoại thử dùng bảng chia sẻ trước — người dùng lưu thẳng vào Ảnh
- * hoặc mở luôn bằng app ngân hàng, đỡ phải đi tìm trong thư mục Tải về. Trình
- * duyệt nào không hỗ trợ thì rơi xuống cách tải tệp thông thường.
+ * On phones, try the share sheet first — the user can save straight to Photos
+ * or open the image directly in their banking app, instead of hunting for it in
+ * the Downloads folder. Browsers that do not support it fall back to a regular
+ * file download.
  */
 export function QrSaveButton({
   url,
-  tenNguoi,
+  tenNguoi: personName,
   className,
 }: {
   url: string;
   tenNguoi: string;
   className?: string;
 }) {
-  const [dangTai, setDangTai] = useState(false);
-  const [loi, setLoi] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  const luu = async () => {
-    setDangTai(true);
-    setLoi(false);
+  const save = async () => {
+    setIsSaving(true);
+    setHasError(false);
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(String(res.status));
 
       const blob = await res.blob();
-      const duoi = blob.type.includes('png') ? 'png' : 'jpg';
-      const tenTep = `qr-${stripDiacritics(tenNguoi) || 'thanh-vien'}.${duoi}`;
-      const file = new File([blob], tenTep, { type: blob.type || 'image/jpeg' });
+      const extension = blob.type.includes('png') ? 'png' : 'jpg';
+      const fileName = `qr-${stripDiacritics(personName) || 'thanh-vien'}.${extension}`;
+      const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
 
       if (navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: `Mã QR của ${tenNguoi}` });
+          await navigator.share({ files: [file], title: `Mã QR của ${personName}` });
           return;
         } catch (e) {
-          // Người dùng bấm hủy thì dừng hẳn, đừng tải thêm một bản nữa.
+          // If the user hits cancel, stop entirely — do not download a second copy.
           if ((e as Error)?.name === 'AbortError') return;
         }
       }
@@ -62,15 +64,15 @@ export function QrSaveButton({
       const objUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = objUrl;
-      a.download = tenTep;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(objUrl);
     } catch {
-      setLoi(true);
+      setHasError(true);
     } finally {
-      setDangTai(false);
+      setIsSaving(false);
     }
   };
 
@@ -78,21 +80,21 @@ export function QrSaveButton({
     <span className="inline-flex flex-col items-start gap-0.5">
       <button
         type="button"
-        onClick={luu}
-        disabled={dangTai}
+        onClick={save}
+        disabled={isSaving}
         className={
           className ??
           'inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-60'
         }
       >
-        {dangTai ? (
+        {isSaving ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : (
           <Download className="h-3.5 w-3.5" />
         )}
-        {dangTai ? 'Đang lưu...' : 'Lưu ảnh QR'}
+        {isSaving ? 'Đang lưu...' : 'Lưu ảnh QR'}
       </button>
-      {loi && (
+      {hasError && (
         <span className="text-[11px] font-semibold text-rose-600">
           Không tải được ảnh. Thử lại giúp.
         </span>

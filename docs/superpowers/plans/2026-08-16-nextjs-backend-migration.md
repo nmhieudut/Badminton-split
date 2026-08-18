@@ -17,6 +17,9 @@
 - **Không lưu thông tin ngân hàng dạng văn bản.** Không có trường số tài khoản, tên ngân hàng, tên chủ tài khoản ở bất cứ đâu — schema, biểu mẫu, báo cáo. Chỉ có ảnh QR.
 - **Không gọi dịch vụ bên thứ ba.** Bỏ `img.vietqr.io`.
 - Ngôn ngữ giao diện là **tiếng Việt**, giữ nguyên cách dùng từ hiện tại.
+- **Mã nguồn viết bằng tiếng Anh** — tên biến, tên hàm, kiểu, và comment.
+- **Chữ trong app là tiếng Việt** — mọi chuỗi người dùng đọc được trên màn hình.
+- **Thông điệp commit tiếng Anh.** Spec và kế hoạch trong `docs/` vẫn tiếng Việt.
 - Kết nối Postgres qua **transaction pooler của Supabase, cổng 6543**, và `postgres(url, { prepare: false })`. Cổng 5432 sẽ cạn kết nối trên serverless.
 - Tên bucket Storage: `member-qr`, chế độ **riêng tư**. Truy cập bằng signed URL sinh từ server.
 - Mỗi task kết thúc bằng một commit. Thông điệp commit viết tiếng Việt, dạng `feat:` / `test:` / `refactor:` / `chore:`.

@@ -21,16 +21,17 @@ interface DailySessionsTabProps {
   defaults: SessionDefaults;
   settlementRows: ViewSettlementRow[];
   courts: { id: string; name: string; defaultFee: number }[];
-  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
 }
 
 /**
- * Trạng thái của form ghi buổi đánh.
- * - `create`: buổi mới, có thể kèm ngày được chọn sẵn từ lịch.
- * - `edit`: sửa buổi đã có (giữ nguyên id khi lưu).
- * - `duplicate`: điền sẵn dữ liệu của buổi cũ nhưng lưu thành buổi mới (bỏ id),
- *   để người dùng tự chọn ngày thay vì đoán "+2 ngày" rồi phải vào sửa lại.
+ * State of the session form.
+ * - `create`: a new session, optionally with a date pre-picked from the calendar.
+ * - `edit`: edit an existing session (keeps its id when saving).
+ * - `duplicate`: pre-fill with an existing session's data but save it as a new one
+ *   (drops the id), so the user picks the date themselves instead of us guessing
+ *   "+2 days" and forcing them to go back and correct it.
  */
 type ModalState =
   | { mode: 'create'; session: null; defaultDate?: string }
@@ -47,12 +48,13 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
   isAdmin,
 }) => {
   const [modal, setModal] = useState<ModalState | null>(null);
-  // Người không sửa được vẫn phải xem được buổi đánh gồm những gì.
-  const [xemChiTiet, setXemChiTiet] = useState<ViewDailySession | null>(null);
-  const [loi, setLoi] = useState<string | null>(null);
+  // People without edit rights still need to see what a session contains.
+  const [viewingSession, setViewingSession] = useState<ViewDailySession | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async (input: DailySessionInput) => {
-    // Nhân bản luôn ghi thành buổi mới, dù form được điền từ một buổi đã có.
+    // Duplicating always writes a new session, even though the form was filled
+    // in from an existing one.
     const payload: DailySessionInput =
       modal?.mode === 'duplicate' ? { ...input, id: undefined } : input;
     await saveDailySession(monthKey, payload);
@@ -60,23 +62,24 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
   };
 
   const handleDelete = async (sessionId: string) => {
-    // Xác nhận đã được hỏi một lần duy nhất trong DailySessionList.
-    // Bắt lỗi tại đây là bắt buộc: hàm này được gọi kiểu "thả trôi" (void ...),
-    // nên lỗi không ai bắt sẽ thành unhandled rejection và làm sập cả trang.
-    setLoi(null);
+    // Confirmation is asked exactly once, over in DailySessionList.
+    // Catching here is mandatory: this function is called as a floating promise
+    // (void ...), so an error nobody catches becomes an unhandled rejection and
+    // crashes the whole page.
+    setError(null);
     try {
       await deleteDailySession(monthKey, sessionId);
     } catch (e) {
       if (isNavigationError(e)) throw e;
-      setLoi(errorMessage(e, 'Không xóa được buổi đánh. Thử lại giúp.'));
+      setError(errorMessage(e, 'Không xóa được buổi đánh. Thử lại giúp.'));
     }
   };
 
   return (
     <>
-      {loi && (
+      {error && (
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700">
-          {loi}
+          {error}
         </p>
       )}
 
@@ -88,7 +91,7 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
         isAdmin={isAdmin}
         onAddSession={(dateStr) => setModal({ mode: 'create', session: null, defaultDate: dateStr })}
         onEditSession={(session) =>
-          isAdmin ? setModal({ mode: 'edit', session }) : setXemChiTiet(session)
+          isAdmin ? setModal({ mode: 'edit', session }) : setViewingSession(session)
         }
         onDeleteSession={(sessionId) => {
           void handleDelete(sessionId);
@@ -107,11 +110,11 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
           onClose={() => setModal(null)}
         />
       )}
-      {xemChiTiet && (
+      {viewingSession && (
         <SessionDetailModal
-          session={xemChiTiet}
+          session={viewingSession}
           members={members}
-          onClose={() => setXemChiTiet(null)}
+          onClose={() => setViewingSession(null)}
         />
       )}
     </>

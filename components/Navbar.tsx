@@ -23,29 +23,29 @@ import { EditMonthModal } from './EditMonthModal';
 
 interface NavbarProps {
   monthKey: string;
-  /** Null khi tháng chưa có kỳ nào — vẫn điều hướng được, chỉ không sửa được. */
+  /** Null when the month has no period yet — navigation still works, editing does not. */
   month: ViewMonth | null;
   monthKeys: string[];
   memberCount: number;
-  /** Số giao dịch chưa chuyển khoản — hiện thành chấm báo trên tab Quyết toán. */
+  /** Number of transfers not yet settled — shown as a badge on the settlement tab. */
   unsettledCount: number;
-  /** Email người đang đăng nhập, null nếu là khách. */
+  /** Email of the signed-in user, null for guests. */
   email: string | null;
-  /** Tên hiển thị từ Google, có thể trống. */
+  /** Display name from Google, may be empty. */
   ten: string | null;
-  /** Ảnh đại diện Google, có thể trống. */
+  /** Google avatar image, may be empty. */
   anhDaiDien: string | null;
-  /** Đúng với cả admin lẫn super admin — điều khiển mọi nút nghiệp vụ. */
+  /** True for both admin and super admin — gates every write-action control. */
   isAdmin: boolean;
-  /** Chỉ điều khiển đúng một thứ: mục quản lý quyền trong menu tiện ích. */
+  /** Gates exactly one thing: the role management entry in the utility menu. */
   isSuperAdmin: boolean;
-  /** Danh sách admin — chỉ nạp khi người xem là super admin, ngược lại rỗng. */
+  /** Admin list — only loaded when the viewer is a super admin, otherwise empty. */
   users: UserRow[];
-  /** Danh sách sân — chỉ nạp cho admin, ngược lại rỗng. */
+  /** Court list — only loaded for admins, otherwise empty. */
   courts: CourtRow[];
 }
 
-/** Dịch monthKey đi `delta` tháng, giữ định dạng `YYYY-MM`. */
+/** Shifts monthKey by `delta` months, keeping the `YYYY-MM` format. */
 function shiftMonthKey(monthKey: string, delta: number): string {
   const [yStr, mStr] = monthKey.split('-');
   const year = parseInt(yStr, 10);
@@ -85,8 +85,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       href: `${base}/settlement`,
       label: 'Quyết toán',
       icon: HandCoins,
-      // Lý do người ta mở app lên là để biết còn ai nợ ai. Thanh điều hướng
-      // trả lời sẵn câu đó thay vì bắt bấm vào mới thấy.
+      // People open the app to find out who still owes whom. The nav bar answers
+      // that up front instead of making them tap through to see it.
       badge: unsettledCount,
     },
     { href: `${base}/members`, label: 'Thành viên', icon: Users, badge: 0 },
@@ -97,15 +97,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const prevKey = shiftMonthKey(monthKey, -1);
   const nextKey = shiftMonthKey(monthKey, 1);
 
-  // Tháng chưa có kỳ thì vẫn phải hiện nhãn để người dùng biết mình đang ở đâu.
-  const [namNhan, thangNhan] = monthKey.split('-');
-  const monthLabel = month?.title || `Tháng ${thangNhan}/${namNhan}`;
+  // A month with no period still needs a label so the user knows where they are.
+  const [labelYear, labelMonth] = monthKey.split('-');
+  const monthLabel = month?.title || `Tháng ${labelMonth}/${labelYear}`;
 
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-3 sm:px-6">
-          {/* Nhãn hiệu — thu về mỗi biểu tượng khi màn hình hẹp */}
+          {/* Brand mark — collapses to just the icon on narrow screens */}
           <Link
             href={base as Route}
             className="flex shrink-0 items-center gap-2 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
@@ -118,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </Link>
 
-          {/* Chuyển kỳ — chiếm phần giữa vì mọi thứ trên màn hình đều thuộc về kỳ này */}
+          {/* Period switcher — takes the center because everything on screen belongs to this period */}
           <div className="flex min-w-0 flex-1 items-center justify-center lg:flex-none lg:justify-start">
             <div className="inline-flex min-w-0 items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5">
               <Link
@@ -150,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Tab trên cùng — chỉ ở màn hình rộng; điện thoại dùng thanh dưới đáy */}
+          {/* Top tabs — wide screens only; phones use the bottom bar instead */}
           <nav
             aria-label="Chuyển mục"
             className="hidden flex-1 items-center justify-center gap-1 lg:flex"
@@ -194,9 +194,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       </header>
 
       {/*
-        Thanh tab dưới đáy — chỉ trên điện thoại.
-        App này được dùng ngay tại sân, một tay, nên các lối đi chính đặt trong
-        tầm ngón cái thay vì sát mép trên màn hình.
+        Bottom tab bar — phones only.
+        This app gets used at the court, one-handed, so the main routes sit within
+        thumb reach instead of along the top edge of the screen.
       */}
       <nav
         aria-label="Chuyển mục"
@@ -215,7 +215,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   active ? 'text-indigo-600' : 'text-slate-500'
                 }`}
               >
-                {/* Vạch chỉ mục đang xem, đặt trên cùng để không bị ngón tay che */}
+                {/* Active-tab indicator, placed on top so a finger does not cover it */}
                 <span
                   aria-hidden
                   className={`absolute inset-x-5 top-0 h-0.5 rounded-full transition-colors ${
