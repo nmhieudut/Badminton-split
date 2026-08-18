@@ -7,11 +7,7 @@ import {
   CheckCircle2,
   Circle,
   Share2,
-  Sparkles,
-  DollarSign,
-  Users,
   AlertCircle,
-  CheckCheck,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -19,14 +15,13 @@ import confetti from 'canvas-confetti';
 import { toggleTransferSettled } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import { ROUNDING_THRESHOLD } from '../lib/settlement/calculate';
-import type { ViewMonth, ViewSettlement, ViewTransfer } from '../lib/view-types';
+import type { ViewSettlement, ViewTransfer } from '../lib/view-types';
 import { MySettlement } from './MySettlement';
 import { QrSaveButton } from './QrSaveButton';
 import { ZaloReportModal } from './ZaloReportModal';
 
 interface SettlementViewProps {
   monthKey: string;
-  month: ViewMonth;
   /** The member using this device, read from the cookie on the server. */
   meId: string | null;
   /** Fully computed on the server — this component only renders it. */
@@ -43,7 +38,6 @@ const transferKey = (t: ViewTransfer) => `${t.fromMemberId}::${t.toMemberId}`;
 
 export const SettlementView: React.FC<SettlementViewProps> = ({
   monthKey,
-  month,
   meId,
   settlement,
   sessionCount,
@@ -59,6 +53,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
   const { rows, transfers, totalCost, totalCourtCost, totalShuttleCost } = settlement;
 
   const completedTransfersCount = transfers.filter((t) => t.isSettled).length;
+  const maxAbsBalance = rows.reduce((max, r) => Math.max(max, Math.abs(r.netBalance)), 0);
   const isAllSettled = transfers.length > 0 && completedTransfersCount === transfers.length;
 
   const handleToggleSettled = (t: ViewTransfer) => {
@@ -89,159 +84,127 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
 
   return (
     <div id="settlement-view-container" className="space-y-8">
-      {/* Overview of the month's numbers */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Tổng Chi Phí Tháng</span>
-            <DollarSign className="h-4 w-4 text-indigo-600" />
-          </div>
-          <p className="mt-2 font-mono text-2xl font-black text-indigo-600">
-            {formatVND(totalCost)}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">{sessionCount} buổi đánh trong kỳ</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Tiền Sân Thực Tế</span>
-            <Users className="h-4 w-4 text-slate-600" />
-          </div>
-          <p className="mt-2 font-mono text-2xl font-black text-slate-900">
-            {formatVND(totalCourtCost)}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">Chia theo số người đi từng buổi</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Tiền Cầu Đã Dùng</span>
-            <Sparkles className="h-4 w-4 text-emerald-600" />
-          </div>
-          <p className="mt-2 font-mono text-2xl font-black text-emerald-600">
-            {formatVND(totalShuttleCost)}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">Tính đúng số quả từng ngày</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Tiến Độ Chuyển Tiền</span>
-            <CheckCheck className="h-4 w-4 text-emerald-600" />
-          </div>
-          <p className="mt-2 font-mono text-2xl font-black text-slate-900">
-            {transfers.length === 0 ? 'Hoàn tất' : `${completedTransfersCount}/${transfers.length} GD`}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            {isAllSettled ? 'Tất cả các giao dịch đã hoàn tất!' : 'Giao dịch chuyển khoản trực tiếp'}
-          </p>
-        </div>
-      </div>
-
       {/*
-        The reconciliation table — the ONLY place each person's numbers are
-        presented. The old version also had a dark "Month-End Settlement" card
-        repeating exactly these numbers, which on a phone meant scrolling
-        through the whole list twice.
+        For a group this size each person's balance IS the summary, so it leads.
+        The month totals sit underneath as supporting detail; they used to be
+        four cards above the fold, which pushed the actual answer off a phone
+        screen. The table this replaces had five columns and scrolled sideways.
       */}
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-slate-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
-            <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">
-              Bảng Đối Soát Theo Điểm Danh
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {month.title} — tính chính xác theo các ngày có mặt + tiền sân &amp; quả cầu thực tế
+            <h2 className="text-base font-extrabold tracking-tight text-slate-900">
+              Ai đang dư, ai đang thiếu
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Tính theo đúng những buổi từng người có mặt
             </p>
           </div>
 
-          {/* A single path to the Zalo report: preview it, then copy from the modal. */}
           <button
             type="button"
             id="open-zalo-report-btn"
             onClick={() => setShowReport(true)}
-            className="inline-flex items-center gap-1.5 self-start rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition-colors"
+            aria-label="Báo cáo nhóm"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer sm:px-3"
           >
             <Share2 className="h-3.5 w-3.5" />
-            <span>Báo Cáo Nhóm</span>
+            <span className="hidden sm:inline">Báo cáo nhóm</span>
           </button>
-        </div>
+        </header>
 
         {error && (
-          <p className="border-b border-slate-100 bg-rose-50 px-6 py-2.5 text-xs font-semibold text-rose-700">
+          <p className="border-b border-slate-200 bg-rose-50 px-5 py-2.5 text-xs font-semibold text-rose-700">
             {error}
           </p>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                <th className="px-6 py-3.5">Thành viên</th>
-                <th className="px-3 py-3.5 text-center">Có mặt</th>
-                <th className="px-4 py-3.5 text-right">Đã chi (1)</th>
-                <th className="px-4 py-3.5 text-right">Phải chịu (2)</th>
-                <th className="px-6 py-3.5 text-right">Thực tế (1-2)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {rows.map((r) => {
-                const isCreditor = r.netBalance > ROUNDING_THRESHOLD;
-                const isDebtor = r.netBalance < -ROUNDING_THRESHOLD;
+        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <span className="flex-1 text-right">← phải chuyển đi</span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span className="flex-1">sẽ nhận về →</span>
+        </div>
 
-                return (
-                  <tr
-                    key={r.memberId}
-                    id={`settlement-row-${r.memberId}`}
-                    className="hover:bg-slate-50/60 transition-colors"
-                  >
-                    <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-700">
-                          {r.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-semibold text-slate-900 text-xs sm:text-sm">
-                          {r.name}
-                        </span>
-                      </div>
-                    </td>
+        <ol className="divide-y divide-slate-100">
+          {rows.map((r) => {
+            const isCreditor = r.netBalance > ROUNDING_THRESHOLD;
+            const isDebtor = r.netBalance < -ROUNDING_THRESHOLD;
+            // Bars are scaled against the biggest balance in the period, so the
+            // longest one always reaches the edge and the rest read relative to it.
+            const pct = maxAbsBalance > 0 ? (Math.abs(r.netBalance) / maxAbsBalance) * 50 : 0;
 
-                    <td className="px-3 py-3.5 text-center font-mono text-xs font-bold text-indigo-700">
-                      {sessionCount > 0 ? `${r.sessionsAttendedCount}/${sessionCount}` : '—'}
-                    </td>
-
-                    <td className="px-4 py-3.5 text-right font-mono text-xs text-slate-600">
+            return (
+              <li key={r.memberId} id={`settlement-row-${r.memberId}`} className="px-5 py-3.5">
+                <div className="flex items-baseline gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-slate-900">{r.name}</p>
+                    <p className="tabular mt-0.5 truncate font-mono text-[11px] text-slate-400">
+                      {sessionCount > 0 ? `${r.sessionsAttendedCount}/${sessionCount} buổi` : '—'}
+                      {' · đã chi '}
                       {formatVND(r.totalPaid)}
-                    </td>
+                    </p>
+                  </div>
 
-                    <td className="px-4 py-3.5 text-right font-mono text-xs text-slate-600">
-                      {formatVND(r.totalShare)}
-                    </td>
+                  <p
+                    className={`tabular shrink-0 font-mono text-sm font-bold ${
+                      isCreditor
+                        ? 'text-emerald-700'
+                        : isDebtor
+                          ? 'text-rose-700'
+                          : 'text-slate-400'
+                    }`}
+                  >
+                    {isCreditor ? '+' : isDebtor ? '−' : ''}
+                    {formatVND(Math.abs(r.netBalance))}
+                  </p>
+                </div>
 
-                    <td className="px-6 py-3.5 text-right font-mono text-xs">
-                      {isCreditor ? (
-                        <span className="font-bold text-emerald-600">
-                          +{formatVND(r.netBalance)}
-                        </span>
-                      ) : isDebtor ? (
-                        <span className="font-bold text-rose-600">
-                          -{formatVND(Math.abs(r.netBalance))}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">0 đ</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                {/* Bars grow from the zero rule towards the side that owes or
+                    is owed. Decorative only — the amount above already states
+                    it, so screen readers skip this. */}
+                <div className="relative mt-2 h-2 rounded-full bg-slate-100" aria-hidden="true">
+                  <div className="absolute inset-y-[-3px] left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-slate-300" />
+                  {pct > 0 && (
+                    <div
+                      className={`absolute top-0 h-full rounded-full ${
+                        isCreditor ? 'bg-emerald-600' : 'bg-rose-600'
+                      }`}
+                      style={
+                        isCreditor
+                          ? { left: '50%', width: `${pct}%` }
+                          : { right: '50%', width: `${pct}%` }
+                      }
+                    />
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
 
-        <div className="border-t border-slate-100 px-6 py-3 text-center text-[11px] italic text-slate-400">
-          * Tiền thừa/thiếu được tính chuẩn dựa trên các buổi có mặt thực tế
-        </div>
-      </div>
+      {/* Month totals — detail, not headline. */}
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-4">
+        {[
+          { label: 'Tổng chi phí', value: formatVND(totalCost), sub: `${sessionCount} buổi đánh` },
+          { label: 'Tiền sân', value: formatVND(totalCourtCost), sub: 'Chia theo số người mỗi buổi' },
+          { label: 'Tiền cầu', value: formatVND(totalShuttleCost), sub: 'Theo số quả thực dùng' },
+          {
+            label: 'Đã chuyển',
+            value:
+              transfers.length === 0 ? '—' : `${completedTransfersCount}/${transfers.length}`,
+            sub: isAllSettled ? 'Xong hết rồi' : 'Giao dịch đã đánh dấu',
+          },
+        ].map((cell) => (
+          <div key={cell.label} className="bg-white px-4 py-3.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              {cell.label}
+            </p>
+            <p className="tabular mt-1 font-mono text-lg font-bold text-slate-900">{cell.value}</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">{cell.sub}</p>
+          </div>
+        ))}
+      </section>
 
       {/*
         What the person holding the device has to do, placed right above the

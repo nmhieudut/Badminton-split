@@ -8,13 +8,11 @@ import {
   Edit2,
   Trash2,
   Users,
-  Grid,
-  List,
   Award,
-  CalendarDays,
 } from 'lucide-react';
 import type { ViewDailySession, ViewMember, ViewSettlementRow } from '../lib/view-types';
 import { formatVND } from '../lib/money';
+import { weekdayVi } from '../lib/weekday';
 import { getMemberColor } from '../lib/categories';
 import { CalendarView } from './CalendarView';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -53,7 +51,7 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
   settlementRows,
   isAdmin,
 }) => {
-  const [viewMode, setViewMode] = useState<'calendar' | 'cards' | 'matrix'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'cards' | 'matrix'>('cards');
   const [selectedCourtFilter, setSelectedCourtFilter] = useState<string>('all');
   const [sessionToDelete, setSessionToDelete] = useState<ViewDailySession | null>(null);
 
@@ -85,48 +83,41 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Action Header & View Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* View Mode Toggle */}
-          <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
+      {/*
+        The view switcher, stripped of the card that used to wrap it. The icons
+        went with it: on a phone they pushed every label onto two lines, and a
+        grid glyph next to the word "Ma trận" says nothing the word did not.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          role="tablist"
+          aria-label="Cách xem buổi đánh"
+          className="inline-flex rounded-xl bg-slate-100 p-0.5"
+        >
+          {(
+            [
+              { mode: 'cards', label: `Danh sách (${sessions.length})`, id: 'view-mode-cards-btn' },
+              { mode: 'calendar', label: 'Lịch tháng', id: 'view-mode-calendar-btn' },
+              { mode: 'matrix', label: 'Ma trận', id: 'view-mode-matrix-btn' },
+            ] as const
+          ).map((tab) => (
             <button
-              id="view-mode-calendar-btn"
-              onClick={() => setViewMode('calendar')}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                viewMode === 'calendar'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+              key={tab.mode}
+              id={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={viewMode === tab.mode}
+              onClick={() => setViewMode(tab.mode)}
+              className={`whitespace-nowrap rounded-[0.6rem] px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                viewMode === tab.mode
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <CalendarDays className="h-3.5 w-3.5" />
-              Lịch Tháng
+              {tab.label}
             </button>
-            <button
-              id="view-mode-cards-btn"
-              onClick={() => setViewMode('cards')}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                viewMode === 'cards'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <List className="h-3.5 w-3.5" />
-              Danh Sách ({sessions.length})
-            </button>
-            <button
-              id="view-mode-matrix-btn"
-              onClick={() => setViewMode('matrix')}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                viewMode === 'matrix'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Grid className="h-3.5 w-3.5" />
-              Ma Trận Điểm Danh
-            </button>
-          </div>
+          ))}
+        </div>
 
           {/* Court Filter for cards */}
           {courts.length > 1 && viewMode === 'cards' && (
@@ -143,16 +134,15 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
               ))}
             </select>
           )}
-        </div>
 
         {isAdmin && (
           <button
             id="add-daily-session-btn"
             onClick={() => onAddSession()}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
+            className="ml-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-indigo-700 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            Ghi Buổi Đánh Mới
+            Ghi buổi mới
           </button>
         )}
       </div>
@@ -165,10 +155,6 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
           members={members}
           onAddSessionOnDate={(dateStr) => onAddSession(dateStr)}
           onEditSession={onEditSession}
-          onDeleteSession={(sId) => {
-            const target = sessions.find((s) => s.id === sId);
-            if (target) setSessionToDelete(target);
-          }}
           onDuplicateSession={onDuplicateSession}
           isAdmin={isAdmin}
         />
@@ -217,89 +203,77 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
                   onClick={() => onEditSession(session)}
                   className="cursor-pointer"
                 >
-                  {/* Top Bar: Date + Court + Total */}
-                  <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col items-center justify-center rounded-xl bg-indigo-50 px-2.5 py-1 text-indigo-900 border border-indigo-100 font-mono">
-                        <span className="text-[10px] font-bold uppercase">
-                          {new Date(session.date).toLocaleDateString('vi-VN', { weekday: 'short' })}
-                        </span>
-                        <span className="text-sm font-black">
-                          {session.date.split('-').slice(1).reverse().join('/')}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-sm">{session.courtName}</h4>
-                        <span className="text-[11px] text-slate-500 font-medium">
-                          Ứng tiền sân: <strong className="text-slate-700">{courtPayer}</strong>
-                        </span>
-                      </div>
+                  {/* Date, court and what the evening cost. */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="tabular font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        {weekdayVi(session.date)} ·{' '}
+                        {session.date.split('-').slice(1).reverse().join('/')}
+                      </p>
+                      <h4 className="mt-0.5 truncate text-sm font-bold text-slate-900">
+                        {session.courtName}
+                      </h4>
                     </div>
 
-                    <div className="text-right">
-                      <div className="font-mono text-base font-black text-slate-900">
+                    <div className="shrink-0 text-right">
+                      <p className="tabular font-mono text-base font-bold text-slate-900">
                         {formatVND(sTotal)}
-                      </div>
-                      <div className="text-[11px] font-bold text-indigo-600 font-mono">
-                        {formatVND(perPerson)} / người
-                      </div>
+                      </p>
+                      <p className="tabular font-mono text-[11px] font-bold text-indigo-600">
+                        {formatVND(perPerson)}/người
+                      </p>
                     </div>
                   </div>
 
-                  {/* Badges Breakdown */}
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
-                      <span className="text-[10px] text-slate-400 block uppercase font-bold">
-                        Tiền sân
-                      </span>
-                      <span className="font-mono font-bold text-slate-800 text-xs">
-                        {formatVND(session.courtFee)}
-                      </span>
-                    </div>
+                  {/*
+                    One line per cost, naming who fronted it. Who paid is what
+                    decides the settlement, so it belongs on the card — the
+                    previous version named the court payer and silently omitted
+                    whoever bought the shuttles. Lines worth nothing are dropped
+                    rather than printed as "0 đ".
+                  */}
+                  <dl className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs">
+                    {[
+                      { label: 'Sân', amount: session.courtFee, payerId: session.courtPayerId },
+                      {
+                        label: `Cầu · ${session.shuttlecockCount} quả`,
+                        amount: sShuttle,
+                        payerId: session.shuttlecockPayerId,
+                      },
+                      { label: 'Nước', amount: session.drinkFee, payerId: session.drinkPayerId },
+                      { label: 'Khác', amount: session.otherFee, payerId: session.otherFeePayerId },
+                    ]
+                      .filter((line) => line.amount > 0)
+                      .map((line) => (
+                        <div key={line.label} className="flex items-baseline justify-between gap-2">
+                          <dt className="truncate text-slate-500">
+                            {line.label}
+                            <span className="text-slate-400">
+                              {' · '}
+                              {members.find((m) => m.id === line.payerId)?.name ?? 'chưa rõ ai ứng'}
+                            </span>
+                          </dt>
+                          <dd className="tabular shrink-0 font-mono font-semibold text-slate-700">
+                            {formatVND(line.amount)}
+                          </dd>
+                        </div>
+                      ))}
+                  </dl>
 
-                    <div className="rounded-xl bg-emerald-50/60 p-2 border border-emerald-100">
-                      <span className="text-[10px] text-emerald-600 block uppercase font-bold">
-                        Cầu ({session.shuttlecockCount} quả)
-                      </span>
-                      <span className="font-mono font-bold text-emerald-800 text-xs">
-                        {formatVND(sShuttle)}
-                      </span>
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-2 border border-slate-100">
-                      <span className="text-[10px] text-slate-400 block uppercase font-bold">
-                        Nước / Khác
-                      </span>
-                      <span className="font-mono font-bold text-slate-800 text-xs">
-                        {formatVND(session.drinkFee + session.otherFee)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Attendees List */}
-                  <div className="mt-3.5">
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
-                        <Users className="h-3 w-3 text-indigo-600" />
-                        Có mặt ({attendees.length} người):
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      {members.map((m) => {
-                        const isAttended = attendees.includes(m.id);
-                        if (!isAttended) return null;
-                        return (
-                          <span
-                            key={m.id}
-                            className="inline-flex items-center rounded-lg bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-900 border border-indigo-100"
-                          >
-                            {m.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  {/*
+                    Names as a sentence, not as a row of bordered chips: five
+                    boxed names inside an already boxed card was most of the
+                    visual noise, and the box around a name carried no meaning.
+                  */}
+                  <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-500">
+                    <span className="font-semibold text-slate-700">
+                      {attendees.length} người:
+                    </span>{' '}
+                    {members
+                      .filter((m) => attendees.includes(m.id))
+                      .map((m) => m.name)
+                      .join(' · ')}
+                  </p>
 
                   {session.note && (
                     <p className="mt-2 text-[11px] italic text-slate-400">

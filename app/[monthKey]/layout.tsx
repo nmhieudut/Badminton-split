@@ -107,13 +107,13 @@ export default async function MonthLayout({
         content at the end of the page; from lg up that bar disappears, so no
         space needs to be reserved.
       */}
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-3.5 pb-24 pt-4 sm:space-y-5 sm:px-6 sm:pt-5 lg:pb-10">
+      <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-3.5 pb-24 pt-4 sm:space-y-5 sm:px-6 sm:pt-5 lg:pb-10">
         {/*
           A month with no period yet is a normal state, not an error — so we show
           an invitation to create the period instead of a 404 page, and do not
           render children (every tab page needs the period's data).
         */}
-        {data ? children : <EmptyMonth monthKey={monthKey} isAdmin={isAdmin} />}
+        {data ? children : <EmptyMonth monthKey={monthKey} isAdmin={isAdmin} existingMonthKeys={monthKeys} />}
       </main>
 
       <footer className="hidden border-t border-slate-200/80 bg-white py-3.5 text-center text-xs text-slate-400 lg:block">

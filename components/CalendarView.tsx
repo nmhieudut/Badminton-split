@@ -1,13 +1,7 @@
 'use client';
 
 import React from 'react';
-import {
-  Calendar as CalendarIcon,
-  Plus,
-  Trash2,
-  Edit2,
-  CheckCircle,
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { ViewDailySession, ViewMember } from '../lib/view-types';
 import { formatVND } from '../lib/money';
 
@@ -17,7 +11,6 @@ interface CalendarViewProps {
   members: ViewMember[];
   onAddSessionOnDate: (dateStr: string) => void;
   onEditSession: (session: ViewDailySession) => void;
-  onDeleteSession: (sessionId: string) => void;
   onDuplicateSession: (session: ViewDailySession) => void;
   /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
@@ -38,14 +31,23 @@ function toDateStr(year: number, month0: number, day: number): string {
   ).padStart(2, '0')}`;
 }
 
-const WEEK_DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
+/* Two labels per weekday: seven columns on a phone leave about 60px each, and
+   "Chủ Nhật" does not fit in that. */
+const WEEK_DAYS = [
+  { short: 'T2', long: 'Thứ 2' },
+  { short: 'T3', long: 'Thứ 3' },
+  { short: 'T4', long: 'Thứ 4' },
+  { short: 'T5', long: 'Thứ 5' },
+  { short: 'T6', long: 'Thứ 6' },
+  { short: 'T7', long: 'Thứ 7' },
+  { short: 'CN', long: 'Chủ nhật' },
+];
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   monthKey,
   sessions,
   onAddSessionOnDate,
   onEditSession,
-  onDeleteSession,
   isAdmin,
 }) => {
   // The month being viewed comes from the URL — no state, no navigation in here.
@@ -120,57 +122,47 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   return (
     <div id="calendar-view-container" className="space-y-4">
-      {/* Calendar Header (month navigation is handled by the Navbar) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-            <CalendarIcon className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 text-base">
-                Tháng {String(month + 1).padStart(2, '0')} / {year}
-              </span>
-              <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700">
-                {monthSessions.length} buổi
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              {isAdmin
-                ? 'Nhấn ngày bất kỳ để ghi buổi đánh hoặc xem chi tiết'
-                : 'Xem lịch các buổi đánh trong tháng'}
-            </p>
-          </div>
-        </div>
-
-        {/* Quick Month Metrics */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="hidden md:flex items-center gap-3 text-xs">
-            <div>
-              <span className="text-[10px] text-slate-400 block font-semibold">CẦU DÙNG</span>
-              <span className="font-mono font-bold text-slate-800">{totalMonthShuttles} quả</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 block font-semibold">TỔNG TIỀN</span>
-              <span className="font-mono font-bold text-indigo-600">{formatVND(totalMonthCost)}</span>
-            </div>
-          </div>
-        </div>
+      {/*
+        The month's totals, which the grid itself cannot show. What stood here
+        repeated the month name from the navbar and the words "Lịch tháng" from
+        the tab, and kept the only real numbers behind `hidden md:flex` — so on
+        a phone the strip said nothing at all.
+      */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-1 text-xs text-slate-500">
+        <span className="tabular font-mono">
+          <strong className="font-bold text-slate-900">{monthSessions.length}</strong> buổi
+        </span>
+        <span className="tabular font-mono">
+          <strong className="font-bold text-slate-900">{totalMonthShuttles}</strong> quả cầu
+        </span>
+        <span className="tabular font-mono">
+          <strong className="font-bold text-slate-900">{formatVND(totalMonthCost)}</strong>
+        </span>
+        {isAdmin && (
+          <span className="ml-auto hidden text-slate-400 sm:inline">
+            Nhấn vào ngày để ghi buổi đánh
+          </span>
+        )}
       </div>
 
-      {/* Calendar Grid */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
-        <div className="min-w-[620px] sm:min-w-0">
-          {/* Days of week header */}
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 text-center">
+      {/*
+        No horizontal scroller. Seven columns have to fit whatever the screen,
+        so the cell drops to a day number and a dot per session on a phone and
+        only shows court and amount from sm up — the month is for finding a day,
+        and the list view is where the detail lives.
+      */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div>
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center">
             {WEEK_DAYS.map((w, idx) => (
               <div
-                key={idx}
-                className={`py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${
-                  idx >= 5 ? 'text-rose-600 bg-rose-50/30' : 'text-slate-600'
+                key={w.short}
+                className={`py-2 text-[10px] font-bold uppercase tracking-wider sm:text-[11px] ${
+                  idx >= 5 ? 'text-rose-700' : 'text-slate-500'
                 }`}
               >
-                {w}
+                <span className="sm:hidden">{w.short}</span>
+                <span className="hidden sm:inline">{w.long}</span>
               </div>
             ))}
           </div>
@@ -182,157 +174,111 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               const isToday = cell.dateStr === todayStr;
               // Without write access a day cell is inert: clicking it does nothing,
               // so don't pretend it is clickable.
-              const cellClickable = isAdmin && cell.isCurrentMonth;
+              // Tapping a day does whatever that day affords: opens the session
+              // if there is one — guests included, they get the read-only view —
+              // and otherwise offers to record one, which only an admin can do.
+              // On a phone the whole cell is the only target big enough to hit.
+              const openDay = hasSessions
+                ? () => onEditSession(cell.sessions[0])
+                : isAdmin && cell.isCurrentMonth
+                  ? () => onAddSessionOnDate(cell.dateStr)
+                  : undefined;
 
               return (
                 <div
                   key={idx}
-                  // Tapping/clicking a day cell opens the session form for that exact date.
-                  onClick={cellClickable ? () => onAddSessionOnDate(cell.dateStr) : undefined}
-                  role={cellClickable ? 'button' : undefined}
-                  tabIndex={cellClickable ? 0 : undefined}
+                  onClick={openDay}
+                  role={openDay ? 'button' : undefined}
+                  tabIndex={openDay ? 0 : undefined}
                   onKeyDown={
-                    cellClickable
+                    openDay
                       ? (e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            onAddSessionOnDate(cell.dateStr);
+                            openDay();
                           }
                         }
                       : undefined
                   }
                   title={
-                    cellClickable ? `Ghi buổi đánh ngày ${cell.dayNum}/${month + 1}` : undefined
+                    hasSessions
+                      ? `Xem buổi ngày ${cell.dayNum}/${month + 1}`
+                      : openDay
+                        ? `Ghi buổi đánh ngày ${cell.dayNum}/${month + 1}`
+                        : undefined
                   }
-                  className={`group relative min-h-[105px] sm:min-h-[120px] p-2 transition-all flex flex-col justify-between ${
+                  className={`group relative flex min-h-[58px] flex-col gap-1 p-1.5 transition-colors sm:min-h-[110px] sm:gap-1.5 sm:p-2 ${
                     !cell.isCurrentMonth
-                      ? 'bg-slate-50/30 text-slate-300'
+                      ? 'bg-slate-50/50'
                       : hasSessions
-                      ? `bg-indigo-50/15${cellClickable ? ' cursor-pointer' : ''}`
-                      : `bg-white${cellClickable ? ' hover:bg-slate-50/50 cursor-pointer' : ''}`
-                  }`}
+                        ? 'bg-indigo-50/40'
+                        : 'bg-white'
+                  } ${openDay ? 'cursor-pointer hover:bg-slate-50' : ''}`}
                 >
-                  {/* Cell Header: Date number & Add button */}
                   <div className="flex items-center justify-between">
                     <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                      className={`tabular flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold ${
                         isToday
-                          ? 'bg-indigo-600 text-white shadow-xs'
-                          : hasSessions
-                          ? 'bg-slate-900 text-white font-mono'
-                          : cell.isCurrentMonth
-                          ? 'text-slate-700'
-                          : 'text-slate-300'
+                          ? 'bg-indigo-600 text-white'
+                          : !cell.isCurrentMonth
+                            ? 'text-slate-300'
+                            : 'text-slate-700'
                       }`}
                     >
                       {cell.dayNum}
                     </span>
 
-                    {cellClickable && (
+                    {/* The add button needs a hover to be discoverable, which a
+                        touch screen has no way to give — the cell itself is the
+                        target there. */}
+                    {isAdmin && cell.isCurrentMonth && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           onAddSessionOnDate(cell.dateStr);
                         }}
-                        className="opacity-60 group-hover:opacity-100 transition-opacity flex h-5 w-5 items-center justify-center rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white cursor-pointer"
-                        title={`Tạo buổi đánh ngày ${cell.dayNum}/${month + 1}`}
+                        className="hidden h-5 w-5 items-center justify-center rounded-md bg-indigo-100 text-indigo-700 opacity-0 transition-opacity hover:bg-indigo-600 hover:text-white group-hover:opacity-100 cursor-pointer sm:flex"
+                        title={`Ghi buổi đánh ngày ${cell.dayNum}/${month + 1}`}
                       >
                         <Plus className="h-3 w-3" />
                       </button>
                     )}
                   </div>
 
-                  {/* Sessions in this day */}
-                  <div className="my-1 space-y-1 flex-1">
-                    {cell.sessions.map((s) => {
-                      const sTotal = sessionTotal(s);
-                      const attendeesCount = s.attendeeIds.length;
-
-                      return (
-                        <div
-                          key={s.id}
-                          onClick={(e) => e.stopPropagation()}
-                          className="group/item relative rounded-xl border border-indigo-200/70 bg-white p-1.5 shadow-2xs hover:border-indigo-400 hover:shadow-xs transition-all"
-                        >
-                          {/*
-                            Anyone can click a session. Admins get the edit form,
-                            everyone else gets the read-only detail view — that
-                            branching is handled by DailySessionsTab.
-                          */}
-                          <div
-                            onClick={() => onEditSession(s)}
-                            className="cursor-pointer"
-                          >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="font-bold text-[11px] text-slate-900 truncate max-w-[80px] sm:max-w-[100px]">
-                                {s.courtName.replace('Sân ', '')}
-                              </span>
-                              <span className="font-mono text-[10px] font-bold text-indigo-600">
-                                {formatVND(sTotal)}
-                              </span>
-                            </div>
-
-                            <div className="mt-0.5 flex items-center justify-between text-[10px] text-slate-500">
-                              <span className="text-indigo-700 font-semibold">
-                                {attendeesCount} người
-                              </span>
-                              <span className="font-semibold text-emerald-600">
-                                {s.shuttlecockCount} quả
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Quick action buttons */}
-                          {isAdmin && (
-                            <div className="mt-1 flex items-center justify-end gap-1 border-t border-slate-100 pt-1">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEditSession(s);
-                                }}
-                                className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors cursor-pointer"
-                                title="Chỉnh sửa buổi này"
-                              >
-                                <Edit2 className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteSession(s.id);
-                                }}
-                                className="rounded p-0.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
-                                title="Xóa buổi đánh này"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {/* Empty day prompt */}
-                    {!hasSessions && cellClickable && (
-                      <div className="flex h-full min-h-[40px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-1 text-[10px] font-medium text-slate-400 opacity-60 group-hover:opacity-100 group-hover:border-indigo-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all text-center">
-                        <span>+ Đánh sân</span>
+                  {hasSessions && (
+                    <>
+                      {/* Phone: one dot per session, centred under the number. */}
+                      <div className="flex flex-1 items-center justify-center gap-1 sm:hidden">
+                        {cell.sessions.map((s) => (
+                          <span key={s.id} className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+                        ))}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Day status indicator */}
-                  <div className="text-[9px] text-slate-400 flex items-center justify-between pt-0.5">
-                    {hasSessions ? (
-                      <span className="text-indigo-600 font-semibold flex items-center gap-0.5">
-                        <CheckCircle className="h-2.5 w-2.5" />
-                        {cell.sessions.length} buổi
-                      </span>
-                    ) : (
-                      cell.isCurrentMonth && <span className="text-slate-300">Nghỉ</span>
-                    )}
-                  </div>
+                      <div className="hidden flex-1 space-y-1 sm:block">
+                        {cell.sessions.map((s) => (
+                          <div
+                            key={s.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditSession(s);
+                            }}
+                            className="cursor-pointer rounded-lg border border-indigo-200 bg-white p-1.5 transition-colors hover:border-indigo-400"
+                          >
+                            <p className="truncate text-[11px] font-bold text-slate-900">
+                              {s.courtName.replace('Sân ', '')}
+                            </p>
+                            <p className="tabular truncate font-mono text-[10px] text-slate-500">
+                              {formatVND(sessionTotal(s))}
+                            </p>
+                            <p className="tabular truncate font-mono text-[10px] text-slate-400">
+                              {s.attendeeIds.length} người · {s.shuttlecockCount} quả
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
