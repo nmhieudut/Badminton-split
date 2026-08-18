@@ -7,7 +7,7 @@
  * `cookies().get(...)` sẽ luôn trả rỗng, và TypeScript không báo lỗi vì kiểu
  * khai báo vẫn là string.
  */
-export const COOKIE_TOI_LA = 'bs_me';
+export const ME_COOKIE = 'bs_me';
 
 /** Ghi nhớ một năm; đây là tuỳ chọn thiết bị, không phải phiên đăng nhập. */
-export const HAN_COOKIE_NGAY = 365;
+export const ME_COOKIE_DAYS = 365;

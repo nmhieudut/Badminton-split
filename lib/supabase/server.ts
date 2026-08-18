@@ -8,7 +8,7 @@ import { ConfigError } from '../errors';
  * CHỈ dùng getAll/setAll cho cookie. Các API get/set/remove kiểu cũ gây ra
  * chuyện người dùng bị đăng xuất ngẫu nhiên và rất khó truy nguyên.
  */
-export async function taoServerClient() {
+export async function createServerSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {

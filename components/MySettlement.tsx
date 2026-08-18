@@ -6,7 +6,7 @@ import { toggleTransferSettled } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import type { ViewSettlementRow, ViewTransfer } from '../lib/view-types';
 import { QrSaveButton } from './QrSaveButton';
-import { COOKIE_TOI_LA, HAN_COOKIE_NGAY } from '../lib/me-cookie';
+import { ME_COOKIE, ME_COOKIE_DAYS } from '../lib/me-cookie';
 
 
 interface MySettlementProps {
@@ -33,12 +33,12 @@ export const MySettlement: React.FC<MySettlementProps> = ({
   const [, startTransition] = useTransition();
 
   const chon = (id: string) => {
-    document.cookie = `${COOKIE_TOI_LA}=${id};path=/;max-age=${HAN_COOKIE_NGAY * 86400};samesite=lax`;
+    document.cookie = `${ME_COOKIE}=${id};path=/;max-age=${ME_COOKIE_DAYS * 86400};samesite=lax`;
     setMeId(id);
   };
 
   const doiNguoi = () => {
-    document.cookie = `${COOKIE_TOI_LA}=;path=/;max-age=0;samesite=lax`;
+    document.cookie = `${ME_COOKIE}=;path=/;max-age=0;samesite=lax`;
     setMeId(null);
   };
 

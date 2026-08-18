@@ -11,7 +11,7 @@ interface DailySessionModalProps {
   initialData: ViewDailySession | null;
   defaults: SessionDefaults;
   /** Sân đang dùng, đổ vào dropdown. Rỗng thì form nhắc thêm sân trước. */
-  danhSachSan: { id: string; name: string; defaultFee: number }[];
+  courts: { id: string; name: string; defaultFee: number }[];
   defaultDate?: string;
   onSave: (input: DailySessionInput) => Promise<void>;
   onClose: () => void;
@@ -31,7 +31,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
   members,
   initialData,
   defaults,
-  danhSachSan,
+  courts,
   defaultDate,
   onSave,
   onClose,
@@ -278,7 +278,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                     // Chọn sân thì điền luôn giá mặc định của sân đó. Buổi đánh
                     // chép lại con số này, nên sau đó sửa giá sân cũng không
                     // làm đổi tiền của buổi đã ghi.
-                    const san = danhSachSan.find((c) => c.name === ten);
+                    const san = courts.find((c) => c.name === ten);
                     if (san) setCourtFeeInput(String(san.defaultFee));
                   }}
                   aria-invalid={!!errors.courtName}
@@ -290,10 +290,10 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                     liệt kê ra, nếu không mở form sửa sẽ thấy ô trống và lưu lại
                     là mất tên sân cũ.
                   */}
-                  {!danhSachSan.some((c) => c.name === courtName) && courtName && (
+                  {!courts.some((c) => c.name === courtName) && courtName && (
                     <option value={courtName}>{courtName} (không còn trong danh sách)</option>
                   )}
-                  {danhSachSan.map((c) => (
+                  {courts.map((c) => (
                     <option key={c.id} value={c.name}>
                       {c.name} — {formatVND(c.defaultFee)}
                     </option>
@@ -302,7 +302,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 {errors.courtName && (
                   <p className="mt-1 text-[11px] font-semibold text-rose-600">{errors.courtName}</p>
                 )}
-                {danhSachSan.length === 0 && (
+                {courts.length === 0 && (
                   <p className="mt-1 text-[11px] text-amber-700">
                     Chưa có sân nào. Mở menu ba chấm trên thanh trên cùng, chọn
                     &ldquo;Quản lý sân&rdquo; để thêm.

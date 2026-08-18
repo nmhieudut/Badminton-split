@@ -4,7 +4,7 @@ import type { Route } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { taoServerClient } from '../../lib/supabase/server';
+import { createServerSupabaseClient } from '../../lib/supabase/server';
 
 /**
  * Hai action trong tệp này KHÔNG gọi requireAdmin(): chưa đăng nhập thì làm
@@ -13,7 +13,7 @@ import { taoServerClient } from '../../lib/supabase/server';
  */
 
 export async function signInWithGoogle(next: string = '/') {
-  const supabase = await taoServerClient();
+  const supabase = await createServerSupabaseClient();
   const origin = (await headers()).get('origin') ?? '';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -34,7 +34,7 @@ export async function signInWithGoogle(next: string = '/') {
 }
 
 export async function signOut() {
-  const supabase = await taoServerClient();
+  const supabase = await createServerSupabaseClient();
   await supabase.auth.signOut();
   revalidatePath('/', 'layout');
 }

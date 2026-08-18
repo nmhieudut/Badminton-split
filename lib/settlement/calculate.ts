@@ -14,7 +14,7 @@ import type {
  * có số dư 300 đồng hiện là còn nợ trên bảng nhưng "ĐÃ ĐỦ" trong báo cáo gửi
  * lên nhóm, mà lại không có giao dịch nào được sinh ra cho họ.
  */
-export const NGUONG_BO_QUA = 500;
+export const ROUNDING_THRESHOLD = 500;
 
 export function calculateSettlement(input: SettlementInput): SettlementOutput {
   const { members, dailySessions } = input;
@@ -29,7 +29,7 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
    * được vào ai và biến mất khỏi tổng — 200.000 chia cho 11 id trong khi kỳ
    * chỉ có 5 người thì 109.090 đồng bốc hơi, và tổng số dư ròng khác 0.
    */
-  const chiGiuNguoiTrongKy = (ids: string[]) => ids.filter((id) => memberIds.has(id));
+  const onlyPeriodMembers = (ids: string[]) => ids.filter((id) => memberIds.has(id));
 
   const zero = () => new Map(members.map((m) => [m.id, 0]));
   const paid = zero();
@@ -65,7 +65,7 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
 
     // Buổi không ghi người có mặt — hoặc chỉ ghi toàn id lạ — thì coi như cả
     // nhóm cùng chịu.
-    const coMat = chiGiuNguoiTrongKy(s.attendeeIds);
+    const coMat = onlyPeriodMembers(s.attendeeIds);
     const attendees = coMat.length > 0 ? coMat : members.map((m) => m.id);
     if (attendees.length === 0) continue;
 
@@ -117,12 +117,12 @@ function buildTransfers(rows: SettlementRow[]): Transfer[] {
   const nameOf = new Map(rows.map((r) => [r.memberId, r.name]));
 
   const debtors = rows
-    .filter((r) => r.netBalance < -NGUONG_BO_QUA)
+    .filter((r) => r.netBalance < -ROUNDING_THRESHOLD)
     .map((r) => ({ id: r.memberId, amount: -r.netBalance }))
     .sort((a, b) => b.amount - a.amount || a.id.localeCompare(b.id));
 
   const creditors = rows
-    .filter((r) => r.netBalance > NGUONG_BO_QUA)
+    .filter((r) => r.netBalance > ROUNDING_THRESHOLD)
     .map((r) => ({ id: r.memberId, amount: r.netBalance }))
     .sort((a, b) => b.amount - a.amount || a.id.localeCompare(b.id));
 

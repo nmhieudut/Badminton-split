@@ -5,7 +5,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { X, Calendar, ChevronLeft, ChevronRight, PlusCircle, Loader2 } from 'lucide-react';
 import { createMonth } from '../app/actions/months';
-import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
+import { isNavigationError, errorMessage } from '../lib/navigation-error';
 
 interface YearMonthPickerModalProps {
   currentMonthKey: string; // e.g. '2026-08'
@@ -67,8 +67,8 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
       } catch (e) {
         // createMonth kết thúc bằng redirect(), mà redirect() hoạt động bằng
         // cách ném lỗi — nuốt nó ở đây là chặn luôn việc chuyển trang.
-        if (laLoiDieuHuong(e)) throw e;
-        setLoi(thongDiepLoi(e, 'Không tạo được kỳ này. Thử lại giúp.'));
+        if (isNavigationError(e)) throw e;
+        setLoi(errorMessage(e, 'Không tạo được kỳ này. Thử lại giúp.'));
         setPendingKey(null);
       }
     });

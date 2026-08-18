@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname } from 'next/navigation';
 import { CalendarCog, LogIn, LogOut, MapPin, ShieldCheck, UserCog } from 'lucide-react';
 import { signOut } from '../app/actions/auth';
-import { laLoiDieuHuong } from '../lib/loi-dieu-huong';
+import { isNavigationError } from '../lib/navigation-error';
 import { LoginModal } from './LoginModal';
 
 export interface AuthButtonProps {
@@ -14,7 +14,7 @@ export interface AuthButtonProps {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   /** Chỉ hiện mục sửa kỳ khi tháng đang xem thật sự có kỳ. */
-  coTheSuaKy: boolean;
+  canEditPeriod: boolean;
   onOpenEditMonth: () => void;
   onOpenCourts: () => void;
   onOpenAdmins: () => void;
@@ -26,7 +26,7 @@ export function AuthButton({
   anhDaiDien,
   isAdmin,
   isSuperAdmin,
-  coTheSuaKy,
+  canEditPeriod,
   onOpenEditMonth,
   onOpenCourts,
   onOpenAdmins,
@@ -158,7 +158,7 @@ export function AuthButton({
 
           {isAdmin && (
             <div className="border-t border-slate-100 py-1.5">
-              {coTheSuaKy && (
+              {canEditPeriod && (
                 <button
                   type="button"
                   role="menuitem"
@@ -213,7 +213,7 @@ export function AuthButton({
                   try {
                     await signOut();
                   } catch (e) {
-                    if (laLoiDieuHuong(e)) throw e;
+                    if (isNavigationError(e)) throw e;
                     // Đăng xuất hỏng thì không có gì để người dùng sửa; ghi log
                     // rồi thôi, quan trọng là đừng làm sập cả trang.
                     console.error('[đăng xuất] thất bại', e);

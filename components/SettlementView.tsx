@@ -18,7 +18,7 @@ import {
 import confetti from 'canvas-confetti';
 import { toggleTransferSettled } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
-import { NGUONG_BO_QUA } from '../lib/settlement/calculate';
+import { ROUNDING_THRESHOLD } from '../lib/settlement/calculate';
 import type { ViewMonth, ViewSettlement, ViewTransfer } from '../lib/view-types';
 import { MySettlement } from './MySettlement';
 import { QrSaveButton } from './QrSaveButton';
@@ -185,8 +185,8 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-50">
               {rows.map((r) => {
-                const isCreditor = r.netBalance > NGUONG_BO_QUA;
-                const isDebtor = r.netBalance < -NGUONG_BO_QUA;
+                const isCreditor = r.netBalance > ROUNDING_THRESHOLD;
+                const isDebtor = r.netBalance < -ROUNDING_THRESHOLD;
 
                 return (
                   <tr

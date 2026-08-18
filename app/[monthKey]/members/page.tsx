@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getMonthData } from '../../../db/queries';
 import { getQrSignedUrl } from '../../../lib/storage';
 import { MemberView } from '../../../components/MemberView';
-import { getVaiTro } from '../../../lib/auth/session';
+import { getRole } from '../../../lib/auth/session';
 
 export default async function Page({ params }: { params: Promise<{ monthKey: string }> }) {
   const { monthKey } = await params;
@@ -13,7 +13,7 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
     data.members.map(async (m) => ({ ...m, qrUrl: await getQrSignedUrl(m.qrImagePath) }))
   );
 
-  const vaiTro = await getVaiTro();
+  const vaiTro = await getRole();
   const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
 
   return (

@@ -5,28 +5,28 @@ import { createPortal } from 'react-dom';
 import { ShieldCheck, X } from 'lucide-react';
 import { addAdmin, removeAdmin } from '../app/actions/admins';
 
-export type VaiTroDong = 'super_admin' | 'admin' | 'chi_xem';
+export type RowRole = 'super_admin' | 'admin' | 'chi_xem';
 
-export interface DongNguoiDung {
+export interface UserRow {
   email: string;
   ten: string | null;
   anhDaiDien: string | null;
-  vaiTro: VaiTroDong;
+  vaiTro: RowRole;
   /** Ngày đăng nhập gần nhất; null nghĩa là chưa từng đăng nhập. */
   lanCuoi: string | null;
 }
 
-const NHAN: Record<VaiTroDong, { chu: string; lop: string }> = {
+const NHAN: Record<RowRole, { chu: string; lop: string }> = {
   super_admin: { chu: 'Chủ nhóm', lop: 'bg-emerald-50 text-emerald-700' },
   admin: { chu: 'Quản lý', lop: 'bg-indigo-50 text-indigo-700' },
   chi_xem: { chu: 'Chỉ xem', lop: 'bg-slate-100 text-slate-500' },
 };
 
 export function AdminsModal({
-  danhSach,
+  rows,
   onClose,
 }: {
-  danhSach: DongNguoiDung[];
+  rows: UserRow[];
   onClose: () => void;
 }) {
   const [loi, setLoi] = useState<string | null>(null);
@@ -92,13 +92,13 @@ export function AdminsModal({
         </div>
 
         <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-5">
-          {danhSach.length === 0 && (
+          {rows.length === 0 && (
             <li className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400">
               Chưa có ai đăng nhập ngoài bạn.
             </li>
           )}
 
-          {danhSach.map((n) => {
+          {rows.map((n) => {
             const laSuper = n.vaiTro === 'super_admin';
             const laAdmin = n.vaiTro === 'admin';
             const nhan = NHAN[n.vaiTro];

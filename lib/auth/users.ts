@@ -1,6 +1,6 @@
-import { taoAdminClient } from '../supabase/admin';
+import { createAdminSupabaseClient } from '../supabase/admin';
 
-export interface TaiKhoan {
+export interface AuthUser {
   email: string;
   ten: string | null;
   anhDaiDien: string | null;
@@ -16,8 +16,8 @@ export interface TaiKhoan {
  *
  * Lấy 200 tài khoản đầu; một nhóm cầu lông không bao giờ chạm tới ngưỡng đó.
  */
-export async function listAuthUsers(): Promise<TaiKhoan[]> {
-  const supabase = taoAdminClient();
+export async function listAuthUsers(): Promise<AuthUser[]> {
+  const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
 
   if (error) {

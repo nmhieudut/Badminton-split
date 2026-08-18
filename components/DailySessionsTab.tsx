@@ -12,7 +12,7 @@ import { deleteDailySession, saveDailySession } from '../app/actions/daily-sessi
 import { DailySessionList } from './DailySessionList';
 import { DailySessionModal } from './DailySessionModal';
 import { SessionDetailModal } from './SessionDetailModal';
-import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
+import { isNavigationError, errorMessage } from '../lib/navigation-error';
 
 interface DailySessionsTabProps {
   monthKey: string;
@@ -20,7 +20,7 @@ interface DailySessionsTabProps {
   sessions: ViewDailySession[];
   defaults: SessionDefaults;
   settlementRows: ViewSettlementRow[];
-  danhSachSan: { id: string; name: string; defaultFee: number }[];
+  courts: { id: string; name: string; defaultFee: number }[];
   /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
   isAdmin: boolean;
 }
@@ -43,7 +43,7 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
   sessions,
   defaults,
   settlementRows,
-  danhSachSan,
+  courts,
   isAdmin,
 }) => {
   const [modal, setModal] = useState<ModalState | null>(null);
@@ -67,8 +67,8 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
     try {
       await deleteDailySession(monthKey, sessionId);
     } catch (e) {
-      if (laLoiDieuHuong(e)) throw e;
-      setLoi(thongDiepLoi(e, 'Không xóa được buổi đánh. Thử lại giúp.'));
+      if (isNavigationError(e)) throw e;
+      setLoi(errorMessage(e, 'Không xóa được buổi đánh. Thử lại giúp.'));
     }
   };
 
@@ -101,7 +101,7 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
           members={members}
           initialData={modal.mode === 'create' ? null : modal.session}
           defaults={defaults}
-          danhSachSan={danhSachSan}
+          courts={courts}
           defaultDate={modal.mode === 'create' ? modal.defaultDate : undefined}
           onSave={handleSave}
           onClose={() => setModal(null)}

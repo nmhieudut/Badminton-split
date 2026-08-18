@@ -4,7 +4,7 @@ import { getMonthData } from '../../../db/queries';
 import { getQrSignedUrl } from '../../../lib/storage';
 import { generateZaloReport } from '../../../lib/settlement/report';
 import { SettlementView } from '../../../components/SettlementView';
-import { COOKIE_TOI_LA } from '../../../lib/me-cookie';
+import { ME_COOKIE } from '../../../lib/me-cookie';
 
 export default async function Page({ params }: { params: Promise<{ monthKey: string }> }) {
   const { monthKey } = await params;
@@ -17,7 +17,7 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
 
   // Ai đang cầm máy. Đọc ở server để khối "việc của tôi" hiện đúng ngay từ đầu.
   // Bỏ qua nếu người trong cookie không thuộc kỳ này.
-  const luu = (await cookies()).get(COOKIE_TOI_LA)?.value ?? null;
+  const luu = (await cookies()).get(ME_COOKIE)?.value ?? null;
   const meId = luu && data.members.some((m) => m.id === luu) ? luu : null;
 
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 
 /** Bỏ dấu tiếng Việt để tên tệp không bị mã hóa loạn trên máy khác. */
-function boDau(s: string): string {
+function stripDiacritics(s: string): string {
   return s
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -46,7 +46,7 @@ export function QrSaveButton({
 
       const blob = await res.blob();
       const duoi = blob.type.includes('png') ? 'png' : 'jpg';
-      const tenTep = `qr-${boDau(tenNguoi) || 'thanh-vien'}.${duoi}`;
+      const tenTep = `qr-${stripDiacritics(tenNguoi) || 'thanh-vien'}.${duoi}`;
       const file = new File([blob], tenTep, { type: blob.type || 'image/jpeg' });
 
       if (navigator.canShare?.({ files: [file] })) {

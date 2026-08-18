@@ -8,17 +8,17 @@
  * Đọc lại biến ở mỗi lần gọi thay vì cache, để đổi biến trên Vercel là có hiệu
  * lực ngay ở lần gọi kế tiếp.
  */
-export function laEmailAdmin(email: string | null | undefined): boolean {
+export function isSuperAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
 
-  const danhSach = (process.env.ADMIN_EMAILS ?? '')
+  const rows = (process.env.ADMIN_EMAILS ?? '')
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
   // Danh sách rỗng nghĩa là không có super admin nào. Hỏng theo hướng an toàn:
   // quên khai báo biến thì mất tính năng, chứ không phải mở toang cửa.
-  if (danhSach.length === 0) return false;
+  if (rows.length === 0) return false;
 
-  return danhSach.includes(email.trim().toLowerCase());
+  return rows.includes(email.trim().toLowerCase());
 }

@@ -35,7 +35,7 @@ const CONG_KHAI = new Map<string, string>([
  * object — như `updateMonth(id, fields: { title?: string })` — vì khi đó nó
  * cắt trúng kiểu tham số và bỏ sót cả thân hàm thật.
  */
-function layThanHam(nguon: string, tenHam: string): string {
+function functionBody(nguon: string, tenHam: string): string {
   const bd = nguon.indexOf(`export async function ${tenHam}`);
   if (bd === -1) return '';
 
@@ -96,7 +96,7 @@ describe('mọi Server Action ghi dữ liệu đều có chốt chặn', () => {
       }
 
       it(`${tep} → ${ten}() có chốt chặn`, () => {
-        const than = layThanHam(nguon, ten);
+        const than = functionBody(nguon, ten);
         expect(
           than.includes('requireAdmin()') || than.includes('requireSuperAdmin()')
         ).toBe(true);
@@ -107,7 +107,7 @@ describe('mọi Server Action ghi dữ liệu đều có chốt chặn', () => {
         // đó hạ requireSuperAdmin() xuống requireAdmin() — mà đó chính là lỗi
         // xóa mất ranh giới giữa hai nhóm quyền.
         it(`${tep} → ${ten}() dùng đúng requireSuperAdmin()`, () => {
-          expect(layThanHam(nguon, ten)).toContain('requireSuperAdmin()');
+          expect(functionBody(nguon, ten)).toContain('requireSuperAdmin()');
         });
       }
     }

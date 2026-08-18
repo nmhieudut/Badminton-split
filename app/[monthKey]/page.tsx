@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getMonthData, getSessionDefaults, listActiveCourts } from '../../db/queries';
 import { DailySessionsTab } from '../../components/DailySessionsTab';
-import { getVaiTro } from '../../lib/auth/session';
+import { getRole } from '../../lib/auth/session';
 
 export default async function Page({ params }: { params: Promise<{ monthKey: string }> }) {
   const { monthKey } = await params;
@@ -9,9 +9,9 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
   if (!data) notFound();
 
   const defaults = await getSessionDefaults(monthKey);
-  const danhSachSan = await listActiveCourts();
+  const courts = await listActiveCourts();
 
-  const vaiTro = await getVaiTro();
+  const vaiTro = await getRole();
   const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
 
   return (
@@ -21,7 +21,7 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
       sessions={data.dailySessions}
       defaults={defaults}
       settlementRows={data.settlement.rows}
-      danhSachSan={danhSachSan}
+      courts={courts}
       isAdmin={isAdmin}
     />
   );

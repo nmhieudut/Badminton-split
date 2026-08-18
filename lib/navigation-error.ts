@@ -5,7 +5,7 @@
  * không được chuyển trang, và thấy một thông báo lỗi vô nghĩa. Mọi chỗ bắt lỗi
  * quanh Server Action đều phải ném lại hai loại này.
  */
-export function laLoiDieuHuong(e: unknown): boolean {
+export function isNavigationError(e: unknown): boolean {
   const digest = (e as { digest?: unknown } | null)?.digest;
   return (
     typeof digest === 'string' &&
@@ -14,6 +14,6 @@ export function laLoiDieuHuong(e: unknown): boolean {
 }
 
 /** Thông báo hiện cho người dùng khi một thao tác thất bại. */
-export function thongDiepLoi(e: unknown, macDinh = 'Không lưu được. Thử lại giúp.'): string {
+export function errorMessage(e: unknown, macDinh = 'Không lưu được. Thử lại giúp.'): string {
   return e instanceof Error && e.message ? e.message : macDinh;
 }

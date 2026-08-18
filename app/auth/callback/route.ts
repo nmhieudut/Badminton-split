@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { taoServerClient } from '../../../lib/supabase/server';
+import { createServerSupabaseClient } from '../../../lib/supabase/server';
 
 /**
  * Google trả người dùng về Supabase, Supabase đẩy tiếp về đây kèm mã `code`.
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next') ?? '/';
 
   if (code) {
-    const supabase = await taoServerClient();
+    const supabase = await createServerSupabaseClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       // Chỉ nhận đường dẫn nội bộ, chặn chuyển hướng ra ngoài.

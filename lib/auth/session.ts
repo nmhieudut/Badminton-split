@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { admins } from '../../db/schema';
-import { taoServerClient } from '../supabase/server';
-import { laEmailAdmin } from './admin-emails';
+import { createServerSupabaseClient } from '../supabase/server';
+import { isSuperAdminEmail } from './admin-emails';
 
-export type VaiTro = 'super_admin' | 'admin' | null;
+export type Role = 'super_admin' | 'admin' | null;
 
-export interface NguoiDung {
+export interface SessionUser {
   email: string | null;
   /** Tên hiển thị từ Google; có thể trống nếu tài khoản không đặt tên. */
   ten: string | null;
@@ -20,8 +20,8 @@ export interface NguoiDung {
  * Dùng getUser() chứ không phải getSession(): getUser() hỏi lại máy chủ auth
  * để xác thực token, còn getSession() chỉ đọc cookie nên có thể bị giả mạo.
  */
-export async function getSessionUser(): Promise<NguoiDung | null> {
-  const supabase = await taoServerClient();
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -45,12 +45,12 @@ export async function getSessionUser(): Promise<NguoiDung | null> {
  * Biến môi trường luôn thắng: một email vừa có trong ADMIN_EMAILS vừa có trong
  * bảng admins thì tính là super admin.
  */
-export async function getVaiTro(): Promise<VaiTro> {
+export async function getRole(): Promise<Role> {
   const user = await getSessionUser();
   const email = user?.email?.trim().toLowerCase();
   if (!email) return null;
 
-  if (laEmailAdmin(email)) return 'super_admin';
+  if (isSuperAdminEmail(email)) return 'super_admin';
 
   const [dong] = await db
     .select({ email: admins.email })
@@ -72,7 +72,7 @@ const KHONG_DU_QUYEN = 'Bạn không có quyền thực hiện thao tác này.';
  * bao giờ áp lên truy vấn của chính mình.
  */
 export async function requireAdmin(): Promise<void> {
-  const vaiTro = await getVaiTro();
+  const vaiTro = await getRole();
   if (vaiTro === 'admin' || vaiTro === 'super_admin') return;
 
   console.warn('[phân quyền] từ chối thao tác ghi: không đủ quyền');
@@ -88,7 +88,7 @@ export async function requireAdmin(): Promise<void> {
  * nhóm biến mất mà không có gì báo.
  */
 export async function requireSuperAdmin(): Promise<void> {
-  if ((await getVaiTro()) === 'super_admin') return;
+  if ((await getRole()) === 'super_admin') return;
 
   console.warn('[phân quyền] từ chối thao tác quản lý admin: không phải super admin');
   throw new Error(KHONG_DU_QUYEN);

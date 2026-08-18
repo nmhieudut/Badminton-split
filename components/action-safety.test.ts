@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 const GOC = process.cwd();
 
 /** Duyệt đệ quy để lấy mọi component, kể cả trong thư mục con. */
-function moiTep(thuMuc: string): string[] {
+function allFiles(thuMuc: string): string[] {
   return readdirSync(thuMuc, { withFileTypes: true }).flatMap((e) => {
     const duong = join(thuMuc, e.name);
-    if (e.isDirectory()) return moiTep(duong);
+    if (e.isDirectory()) return allFiles(duong);
     return e.name.endsWith('.tsx') ? [duong] : [];
   });
 }
@@ -22,8 +22,8 @@ function moiTep(thuMuc: string): string[] {
  */
 describe('mọi nơi gọi Server Action đều bắt lỗi', () => {
   const tep = [
-    ...moiTep(join(GOC, 'components')),
-    ...moiTep(join(GOC, 'app')).filter((f) => !f.includes('/actions/')),
+    ...allFiles(join(GOC, 'components')),
+    ...allFiles(join(GOC, 'app')).filter((f) => !f.includes('/actions/')),
   ];
 
   const goiAction = tep.filter((f) => {

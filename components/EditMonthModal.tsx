@@ -6,7 +6,7 @@ import type { ViewMonth } from '../lib/view-types';
 import { parseVNDInput } from '../lib/money';
 import { deleteMonth, updateMonth } from '../app/actions/months';
 import { ConfirmDialog } from './ConfirmDialog';
-import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
+import { isNavigationError, errorMessage } from '../lib/navigation-error';
 
 interface EditMonthModalProps {
   month: ViewMonth;
@@ -49,8 +49,8 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
         onClose();
       } catch (err) {
         // redirect()/notFound() ném lỗi để hoạt động — phải cho chúng đi tiếp.
-        if (laLoiDieuHuong(err)) throw err;
-        setLoi(thongDiepLoi(err));
+        if (isNavigationError(err)) throw err;
+        setLoi(errorMessage(err));
       }
     });
   };
@@ -61,8 +61,8 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
       try {
         await deleteMonth(month.id);
       } catch (err) {
-        if (laLoiDieuHuong(err)) throw err;
-        setLoi(thongDiepLoi(err, 'Không xóa được kỳ này. Thử lại giúp.'));
+        if (isNavigationError(err)) throw err;
+        setLoi(errorMessage(err, 'Không xóa được kỳ này. Thử lại giúp.'));
       }
     });
   };

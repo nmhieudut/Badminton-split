@@ -6,7 +6,7 @@ import { Eye, EyeOff, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { createCourt, deleteCourt, toggleCourtActive, updateCourt } from '../app/actions/courts';
 import { formatVND, parseVNDInput } from '../lib/money';
 
-export interface DongSan {
+export interface CourtRow {
   id: string;
   name: string;
   defaultFee: number;
@@ -14,10 +14,10 @@ export interface DongSan {
 }
 
 export function CourtsModal({
-  danhSach,
+  rows,
   onClose,
 }: {
-  danhSach: DongSan[];
+  rows: CourtRow[];
   onClose: () => void;
 }) {
   const [tenMoi, setTenMoi] = useState('');
@@ -53,7 +53,7 @@ export function CourtsModal({
     });
   };
 
-  const batDauSua = (s: DongSan) => {
+  const batDauSua = (s: CourtRow) => {
     setDangSua(s.id);
     setTenSua(s.name);
     setGiaSua(String(s.defaultFee));
@@ -93,13 +93,13 @@ export function CourtsModal({
         </div>
 
         <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-5">
-          {danhSach.length === 0 && (
+          {rows.length === 0 && (
             <li className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400">
               Chưa có sân nào. Thêm sân đầu tiên ở bên dưới.
             </li>
           )}
 
-          {danhSach.map((s) =>
+          {rows.map((s) =>
             dangSua === s.id ? (
               <li key={s.id} className="rounded-xl border border-indigo-300 bg-indigo-50/40 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row">

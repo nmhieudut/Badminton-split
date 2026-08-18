@@ -1,5 +1,5 @@
 import { formatVND } from '../money';
-import { NGUONG_BO_QUA } from './calculate';
+import { ROUNDING_THRESHOLD } from './calculate';
 import type { SettlementOutput } from './types';
 
 export interface ReportArgs {
@@ -26,9 +26,9 @@ export function generateZaloReport(args: ReportArgs): string {
   lines.push('📊 ĐỐI SOÁT THEO SỐ BUỔI CÓ MẶT CỦA TỪNG NGƯỜI:');
   for (const r of settlement.rows) {
     const status =
-      r.netBalance > NGUONG_BO_QUA
+      r.netBalance > ROUNDING_THRESHOLD
         ? `👉 ĐƯỢC NHẬN LẠI: +${formatVND(r.netBalance)}`
-        : r.netBalance < -NGUONG_BO_QUA
+        : r.netBalance < -ROUNDING_THRESHOLD
           ? `👉 CẦN ĐÓNG THÊM: ${formatVND(Math.abs(r.netBalance))}`
           : '👉 ĐÃ ĐỦ (0 đ)';
 

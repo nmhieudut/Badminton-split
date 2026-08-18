@@ -6,7 +6,7 @@ import { ConfigError } from '../errors';
  *
  * Không bao giờ đưa client này, hay khóa của nó, xuống trình duyệt.
  */
-export function taoAdminClient() {
+export function createAdminSupabaseClient() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {

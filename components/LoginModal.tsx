@@ -4,7 +4,7 @@ import React, { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { signInWithGoogle } from '../app/actions/auth';
-import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
+import { isNavigationError, errorMessage } from '../lib/navigation-error';
 
 export function LoginModal({ next, onClose }: { next: string; onClose: () => void }) {
   const [dangChay, startTransition] = useTransition();
@@ -64,8 +64,8 @@ export function LoginModal({ next, onClose }: { next: string; onClose: () => voi
                 await signInWithGoogle(next);
               } catch (e) {
                 // signInWithGoogle kết thúc bằng redirect() sang Google.
-                if (laLoiDieuHuong(e)) throw e;
-                setLoi(thongDiepLoi(e, 'Không mở được trang đăng nhập.'));
+                if (isNavigationError(e)) throw e;
+                setLoi(errorMessage(e, 'Không mở được trang đăng nhập.'));
               }
             })
           }

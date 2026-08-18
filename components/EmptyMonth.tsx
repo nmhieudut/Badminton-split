@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { CalendarPlus, CalendarX2 } from 'lucide-react';
 import { createMonth } from '../app/actions/months';
-import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
+import { isNavigationError, errorMessage } from '../lib/navigation-error';
 
 /**
  * Hiện khi người dùng chuyển tới một tháng chưa có kỳ nào.
@@ -50,8 +50,8 @@ export function EmptyMonth({
               } catch (e) {
                 // createMonth kết thúc bằng redirect(); nuốt lỗi đó là chặn
                 // luôn việc chuyển sang kỳ vừa tạo.
-                if (laLoiDieuHuong(e)) throw e;
-                setLoi(thongDiepLoi(e, 'Không tạo được kỳ này. Thử lại giúp.'));
+                if (isNavigationError(e)) throw e;
+                setLoi(errorMessage(e, 'Không tạo được kỳ này. Thử lại giúp.'));
               }
             })
           }

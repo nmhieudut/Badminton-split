@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getMonthData, listAdmins, listCourts, listMonthKeys } from '../../db/queries';
 import { Navbar } from '../../components/Navbar';
-import { getSessionUser, getVaiTro } from '../../lib/auth/session';
-import type { DongNguoiDung, VaiTroDong } from '../../components/AdminsModal';
+import { getSessionUser, getRole } from '../../lib/auth/session';
+import type { UserRow, RowRole } from '../../components/AdminsModal';
 import { listAuthUsers } from '../../lib/auth/users';
-import type { DongSan } from '../../components/CourtsModal';
+import type { CourtRow } from '../../components/CourtsModal';
 import { EmptyMonth } from '../../components/EmptyMonth';
 
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -22,7 +22,7 @@ export default async function MonthLayout({
   const data = await getMonthData(monthKey);
   const monthKeys = await listMonthKeys();
 
-  const [user, vaiTro] = await Promise.all([getSessionUser(), getVaiTro()]);
+  const [user, vaiTro] = await Promise.all([getSessionUser(), getRole()]);
   const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
   const isSuperAdmin = vaiTro === 'super_admin';
 
@@ -36,7 +36,7 @@ export default async function MonthLayout({
     Người được cấp quyền trước khi kịp đăng nhập vẫn phải hiện ra, kèm ghi chú,
     nếu không super admin sẽ tưởng thao tác cấp quyền của mình không ăn.
   */
-  let danhSachNguoiDung: DongNguoiDung[] = [];
+  let users: UserRow[] = [];
 
   if (isSuperAdmin) {
     const superEmails = new Set(
@@ -49,12 +49,12 @@ export default async function MonthLayout({
     const taiKhoan = await listAuthUsers();
     const daBiet = new Map(taiKhoan.map((u) => [u.email, u]));
 
-    const vaiTroCua = (email: string): VaiTroDong =>
+    const vaiTroCua = (email: string): RowRole =>
       superEmails.has(email) ? 'super_admin' : adminEmails.has(email) ? 'admin' : 'chi_xem';
 
     const moiEmail = new Set([...superEmails, ...adminEmails, ...daBiet.keys()]);
 
-    danhSachNguoiDung = [...moiEmail]
+    users = [...moiEmail]
       .map((email) => {
         const u = daBiet.get(email);
         return {
@@ -76,7 +76,7 @@ export default async function MonthLayout({
   }
 
   // Chỉ admin mới mở được màn hình quản lý sân, nên khách khỏi tốn truy vấn.
-  const danhSachSan: DongSan[] = isAdmin ? await listCourts() : [];
+  const courts: CourtRow[] = isAdmin ? await listCourts() : [];
   const unsettledCount = data
     ? data.settlement.transfers.filter((t) => !t.isSettled).length
     : 0;
@@ -94,8 +94,8 @@ export default async function MonthLayout({
         anhDaiDien={user?.anhDaiDien ?? null}
         isAdmin={isAdmin}
         isSuperAdmin={isSuperAdmin}
-        danhSachAdmin={danhSachNguoiDung}
-        danhSachSan={danhSachSan}
+        users={users}
+        courts={courts}
       />
 
       {/*

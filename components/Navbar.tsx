@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import type { ViewMonth } from '../lib/view-types';
 import { AuthButton } from './AuthButton';
-import { AdminsModal, type DongNguoiDung } from './AdminsModal';
-import { CourtsModal, type DongSan } from './CourtsModal';
+import { AdminsModal, type UserRow } from './AdminsModal';
+import { CourtsModal, type CourtRow } from './CourtsModal';
 import { YearMonthPickerModal } from './YearMonthPickerModal';
 import { EditMonthModal } from './EditMonthModal';
 
@@ -40,9 +40,9 @@ interface NavbarProps {
   /** Chỉ điều khiển đúng một thứ: mục quản lý quyền trong menu tiện ích. */
   isSuperAdmin: boolean;
   /** Danh sách admin — chỉ nạp khi người xem là super admin, ngược lại rỗng. */
-  danhSachAdmin: DongNguoiDung[];
+  users: UserRow[];
   /** Danh sách sân — chỉ nạp cho admin, ngược lại rỗng. */
-  danhSachSan: DongSan[];
+  courts: CourtRow[];
 }
 
 /** Dịch monthKey đi `delta` tháng, giữ định dạng `YYYY-MM`. */
@@ -67,8 +67,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   anhDaiDien,
   isAdmin,
   isSuperAdmin,
-  danhSachAdmin,
-  danhSachSan,
+  users,
+  courts,
 }) => {
   const pathname = usePathname();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -184,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               anhDaiDien={anhDaiDien}
               isAdmin={isAdmin}
               isSuperAdmin={isSuperAdmin}
-              coTheSuaKy={month !== null}
+              canEditPeriod={month !== null}
               onOpenEditMonth={() => setIsEditOpen(true)}
               onOpenCourts={() => setIsCourtsOpen(true)}
               onOpenAdmins={() => setIsAdminsOpen(true)}
@@ -254,11 +254,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       )}
 
       {isCourtsOpen && (
-        <CourtsModal danhSach={danhSachSan} onClose={() => setIsCourtsOpen(false)} />
+        <CourtsModal rows={courts} onClose={() => setIsCourtsOpen(false)} />
       )}
 
       {isAdminsOpen && (
-        <AdminsModal danhSach={danhSachAdmin} onClose={() => setIsAdminsOpen(false)} />
+        <AdminsModal rows={users} onClose={() => setIsAdminsOpen(false)} />
       )}
     </>
   );
