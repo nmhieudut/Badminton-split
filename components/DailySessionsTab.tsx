@@ -12,6 +12,7 @@ import { deleteDailySession, saveDailySession } from '../app/actions/daily-sessi
 import { DailySessionList } from './DailySessionList';
 import { DailySessionModal } from './DailySessionModal';
 import { SessionDetailModal } from './SessionDetailModal';
+import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
 
 interface DailySessionsTabProps {
   monthKey: string;
@@ -48,6 +49,7 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
   const [modal, setModal] = useState<ModalState | null>(null);
   // Người không sửa được vẫn phải xem được buổi đánh gồm những gì.
   const [xemChiTiet, setXemChiTiet] = useState<ViewDailySession | null>(null);
+  const [loi, setLoi] = useState<string | null>(null);
 
   const handleSave = async (input: DailySessionInput) => {
     // Nhân bản luôn ghi thành buổi mới, dù form được điền từ một buổi đã có.
@@ -59,11 +61,25 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
 
   const handleDelete = async (sessionId: string) => {
     // Xác nhận đã được hỏi một lần duy nhất trong DailySessionList.
-    await deleteDailySession(monthKey, sessionId);
+    // Bắt lỗi tại đây là bắt buộc: hàm này được gọi kiểu "thả trôi" (void ...),
+    // nên lỗi không ai bắt sẽ thành unhandled rejection và làm sập cả trang.
+    setLoi(null);
+    try {
+      await deleteDailySession(monthKey, sessionId);
+    } catch (e) {
+      if (laLoiDieuHuong(e)) throw e;
+      setLoi(thongDiepLoi(e, 'Không xóa được buổi đánh. Thử lại giúp.'));
+    }
   };
 
   return (
     <>
+      {loi && (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700">
+          {loi}
+        </p>
+      )}
+
       <DailySessionList
         monthKey={monthKey}
         sessions={sessions}

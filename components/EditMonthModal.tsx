@@ -6,6 +6,7 @@ import type { ViewMonth } from '../lib/view-types';
 import { parseVNDInput } from '../lib/money';
 import { deleteMonth, updateMonth } from '../app/actions/months';
 import { ConfirmDialog } from './ConfirmDialog';
+import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
 
 interface EditMonthModalProps {
   month: ViewMonth;
@@ -32,22 +33,37 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
     setInitialFundInput(num.toLocaleString('vi-VN'));
   };
 
+  const [loi, setLoi] = useState<string | null>(null);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const fund = parseVNDInput(initialFundInput);
+    setLoi(null);
     startTransition(async () => {
-      await updateMonth(month.id, {
-        title: title.trim() || `Tháng ${month.monthKey}`,
-        note: note.trim() || null,
-        initialFund: fund,
-      });
-      onClose();
+      try {
+        await updateMonth(month.id, {
+          title: title.trim() || `Tháng ${month.monthKey}`,
+          note: note.trim() || null,
+          initialFund: fund,
+        });
+        onClose();
+      } catch (err) {
+        // redirect()/notFound() ném lỗi để hoạt động — phải cho chúng đi tiếp.
+        if (laLoiDieuHuong(err)) throw err;
+        setLoi(thongDiepLoi(err));
+      }
     });
   };
 
   const handleDelete = () => {
+    setLoi(null);
     startTransition(async () => {
-      await deleteMonth(month.id);
+      try {
+        await deleteMonth(month.id);
+      } catch (err) {
+        if (laLoiDieuHuong(err)) throw err;
+        setLoi(thongDiepLoi(err, 'Không xóa được kỳ này. Thử lại giúp.'));
+      }
     });
   };
 
@@ -174,6 +190,12 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
                 </button>
               </div>
             </div>
+
+            {loi && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {loi}
+              </p>
+            )}
           </form>
         </div>
       </div>

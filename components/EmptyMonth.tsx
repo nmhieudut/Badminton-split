@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useTransition } from 'react';
+import React, { useState, useTransition } from 'react';
 import { CalendarPlus, CalendarX2 } from 'lucide-react';
 import { createMonth } from '../app/actions/months';
+import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
 
 /**
  * Hiện khi người dùng chuyển tới một tháng chưa có kỳ nào.
@@ -19,6 +20,7 @@ export function EmptyMonth({
   isAdmin: boolean;
 }) {
   const [dangTao, startTransition] = useTransition();
+  const [loi, setLoi] = useState<string | null>(null);
   const [nam, thang] = monthKey.split('-');
 
   return (
@@ -40,12 +42,28 @@ export function EmptyMonth({
         <button
           type="button"
           disabled={dangTao}
-          onClick={() => startTransition(() => void createMonth(monthKey))}
+          onClick={() =>
+            startTransition(async () => {
+              setLoi(null);
+              try {
+                await createMonth(monthKey);
+              } catch (e) {
+                // createMonth kết thúc bằng redirect(); nuốt lỗi đó là chặn
+                // luôn việc chuyển sang kỳ vừa tạo.
+                if (laLoiDieuHuong(e)) throw e;
+                setLoi(thongDiepLoi(e, 'Không tạo được kỳ này. Thử lại giúp.'));
+              }
+            })
+          }
           className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-indigo-700 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
           <CalendarPlus className="h-4 w-4" />
           {dangTao ? 'Đang tạo...' : `Tạo kỳ Tháng ${thang}/${nam}`}
         </button>
+      )}
+
+      {loi && (
+        <p className="mt-4 text-xs font-semibold text-rose-600">{loi}</p>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname } from 'next/navigation';
 import { CalendarCog, LogIn, LogOut, MapPin, ShieldCheck, UserCog } from 'lucide-react';
 import { signOut } from '../app/actions/auth';
+import { laLoiDieuHuong } from '../lib/loi-dieu-huong';
 import { LoginModal } from './LoginModal';
 
 export interface AuthButtonProps {
@@ -207,7 +208,18 @@ export function AuthButton({
               type="button"
               role="menuitem"
               disabled={dangChay}
-              onClick={() => startTransition(() => void signOut())}
+              onClick={() =>
+                startTransition(async () => {
+                  try {
+                    await signOut();
+                  } catch (e) {
+                    if (laLoiDieuHuong(e)) throw e;
+                    // Đăng xuất hỏng thì không có gì để người dùng sửa; ghi log
+                    // rồi thôi, quan trọng là đừng làm sập cả trang.
+                    console.error('[đăng xuất] thất bại', e);
+                  }
+                })
+              }
               className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:opacity-60"
             >
               <LogOut className="h-4 w-4" />

@@ -4,10 +4,12 @@ import React, { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { signInWithGoogle } from '../app/actions/auth';
+import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
 
 export function LoginModal({ next, onClose }: { next: string; onClose: () => void }) {
   const [dangChay, startTransition] = useTransition();
   const [daGanVaoDom, setDaGanVaoDom] = useState(false);
+  const [loi, setLoi] = useState<string | null>(null);
 
   useEffect(() => setDaGanVaoDom(true), []);
 
@@ -55,11 +57,24 @@ export function LoginModal({ next, onClose }: { next: string; onClose: () => voi
         <button
           type="button"
           disabled={dangChay}
-          onClick={() => startTransition(() => void signInWithGoogle(next))}
+          onClick={() =>
+            startTransition(async () => {
+              setLoi(null);
+              try {
+                await signInWithGoogle(next);
+              } catch (e) {
+                // signInWithGoogle kết thúc bằng redirect() sang Google.
+                if (laLoiDieuHuong(e)) throw e;
+                setLoi(thongDiepLoi(e, 'Không mở được trang đăng nhập.'));
+              }
+            })
+          }
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
           {dangChay ? 'Đang chuyển tới Google...' : 'Tiếp tục với Google'}
         </button>
+
+        {loi && <p className="mt-2 text-xs font-semibold text-rose-600">{loi}</p>}
       </div>
     </div>
   );

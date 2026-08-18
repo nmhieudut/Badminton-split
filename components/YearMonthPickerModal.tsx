@@ -5,6 +5,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { X, Calendar, ChevronLeft, ChevronRight, PlusCircle, Loader2 } from 'lucide-react';
 import { createMonth } from '../app/actions/months';
+import { laLoiDieuHuong, thongDiepLoi } from '../lib/loi-dieu-huong';
 
 interface YearMonthPickerModalProps {
   currentMonthKey: string; // e.g. '2026-08'
@@ -48,6 +49,8 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
 
   const existing = new Set(existingMonthKeys);
 
+  const [loi, setLoi] = useState<string | null>(null);
+
   const goToMonth = (monthKey: string) => {
     if (isPending) return;
     if (existing.has(monthKey)) {
@@ -57,8 +60,17 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
     }
     // Kỳ chưa tồn tại: tạo mới rồi server action tự chuyển trang.
     setPendingKey(monthKey);
+    setLoi(null);
     startTransition(async () => {
-      await createMonth(monthKey);
+      try {
+        await createMonth(monthKey);
+      } catch (e) {
+        // createMonth kết thúc bằng redirect(), mà redirect() hoạt động bằng
+        // cách ném lỗi — nuốt nó ở đây là chặn luôn việc chuyển trang.
+        if (laLoiDieuHuong(e)) throw e;
+        setLoi(thongDiepLoi(e, 'Không tạo được kỳ này. Thử lại giúp.'));
+        setPendingKey(null);
+      }
     });
   };
 
@@ -233,6 +245,12 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
               Đóng
             </button>
           </div>
+
+          {loi && (
+            <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+              {loi}
+            </p>
+          )}
         </div>
       </div>
     </div>
