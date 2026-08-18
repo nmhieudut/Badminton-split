@@ -1,1 +1,119 @@
 @import "tailwindcss";
+
+/*
+  The palette is remapped at the theme level rather than class by class.
+  Components keep writing slate/indigo/emerald/rose; those names now resolve to
+  the ramps below, so the whole app shifts together and no screen is left
+  behind on the old colours.
+
+  Two signals carry meaning and nothing else does: court green means money
+  coming to you, clay means money you owe. Everything else is neutral. The
+  previous palette gave four accents equal weight, which is what made a page of
+  six numbers feel loud.
+*/
+@theme {
+  --font-sans: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Neutral — clean and light, with a faint green cast so it sits under the
+     accent rather than fighting it. */
+  --color-slate-50: #f7f9f8;
+  --color-slate-100: #eff2f1;
+  --color-slate-200: #e2e7e5;
+  --color-slate-300: #c7cfcc;
+  --color-slate-400: #97a29e;
+  --color-slate-500: #6f7a76;
+  --color-slate-600: #525c59;
+  --color-slate-700: #3d4644;
+  --color-slate-800: #272e2c;
+  --color-slate-900: #121816;
+  --color-slate-950: #080c0b;
+
+  /* Court green — the anchor, replacing indigo. The tints are vivid mint; the
+     600 step is held dark enough to carry white button text at 4.5:1. */
+  --color-indigo-50: #e9fbf2;
+  --color-indigo-100: #ccf6e1;
+  --color-indigo-200: #99ebc3;
+  --color-indigo-300: #5fdca0;
+  --color-indigo-400: #2ecb80;
+  --color-indigo-500: #12b268;
+  --color-indigo-600: #07894c;
+  --color-indigo-700: #067040;
+  --color-indigo-800: #055733;
+  --color-indigo-900: #044026;
+  --color-indigo-950: #022716;
+
+  /* Money owed to you. */
+  --color-emerald-50: #e7fbf0;
+  --color-emerald-100: #c6f5dd;
+  --color-emerald-200: #92e9be;
+  --color-emerald-300: #56d89a;
+  --color-emerald-400: #22c177;
+  --color-emerald-500: #0faa62;
+  --color-emerald-600: #0a8e50;
+  --color-emerald-700: #077340;
+  --color-emerald-800: #065b33;
+  --color-emerald-900: #044527;
+
+  /* Money you owe, and destructive actions. */
+  --color-rose-50: #fff0ee;
+  --color-rose-100: #ffdbd6;
+  --color-rose-200: #ffb5ac;
+  --color-rose-300: #ff8878;
+  --color-rose-400: #fa5f4b;
+  --color-rose-500: #ee4530;
+  --color-rose-600: #dc3323;
+  --color-rose-700: #b8251a;
+  --color-rose-800: #941d15;
+  --color-rose-900: #6e1610;
+
+  /* Gold — advisory notes and counts. */
+  --color-amber-50: #fff8e6;
+  --color-amber-100: #ffedbf;
+  --color-amber-200: #ffdc85;
+  --color-amber-300: #ffc847;
+  --color-amber-400: #fab81c;
+  --color-amber-500: #e5a008;
+  --color-amber-600: #c48407;
+  --color-amber-700: #9c6805;
+  --color-amber-800: #764e04;
+  --color-amber-900: #533703;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    /* Vietnamese stacks diacritics above capitals; the extra leading keeps the
+       marks from touching the line above at display sizes. */
+    line-height: 1.55;
+  }
+
+  /* Money must line up column to column, which proportional figures do not do. */
+  .tabular,
+  code,
+  kbd,
+  samp {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-600);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

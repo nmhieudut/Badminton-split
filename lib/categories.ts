@@ -1,14 +1,17 @@
+/*
+ * Avatar tints, drawn only from the app's own ramps. The previous set reached
+ * for sky, purple, fuchsia, cyan and orange, which sit outside the theme and so
+ * kept their raw Tailwind hues — a rainbow of initials against a page built on
+ * two signal colours. Variety here only has to help tell six people apart, and
+ * the initial already does most of that work.
+ */
 export const MEMBER_COLORS = [
-  'bg-emerald-100 text-emerald-800 border-emerald-300',
-  'bg-sky-100 text-sky-800 border-sky-300',
-  'bg-indigo-100 text-indigo-800 border-indigo-300',
-  'bg-purple-100 text-purple-800 border-purple-300',
-  'bg-amber-100 text-amber-800 border-amber-300',
-  'bg-rose-100 text-rose-800 border-rose-300',
-  'bg-teal-100 text-teal-800 border-teal-300',
-  'bg-orange-100 text-orange-800 border-orange-300',
-  'bg-cyan-100 text-cyan-800 border-cyan-300',
-  'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300',
+  'bg-indigo-100 text-indigo-800',
+  'bg-amber-100 text-amber-800',
+  'bg-emerald-100 text-emerald-800',
+  'bg-slate-200 text-slate-700',
+  'bg-rose-100 text-rose-800',
+  'bg-indigo-200 text-indigo-900',
 ];
 
 export function getMemberColor(index: number): string {
