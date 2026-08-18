@@ -1,4 +1,4 @@
-import type { getMonthData, getSessionDefaults } from '../db/queries';
+import type { getMonthData, getSessionDefaults, listRoster } from '../db/queries';
 
 /**
  * The shapes the UI receives, inferred directly from the query functions so the
@@ -18,3 +18,6 @@ export type SessionDefaults = Awaited<ReturnType<typeof getSessionDefaults>>;
 
 /** A member plus the signed URL of their QR image, used by the Members and Settlement tabs. */
 export type ViewMemberWithQr = ViewMember & { qrUrl: string | null };
+
+/** One person in the shared roster, flagged with whether they are already in the period. */
+export type RosterEntry = Awaited<ReturnType<typeof listRoster>>[number];

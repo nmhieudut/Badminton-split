@@ -1,20 +1,27 @@
 'use client';
 
 import React, { useMemo, useState, useTransition } from 'react';
-import { Search, Sparkles, TriangleAlert, UserPlus, Users } from 'lucide-react';
-import { createMember, removeMemberFromMonth, updateMember } from '../app/actions/members';
+import { Search, TriangleAlert, UserPlus, UserRoundPlus, Users } from 'lucide-react';
+import {
+  addExistingMembersToMonth,
+  createMember,
+  removeMemberFromMonth,
+  updateMember,
+} from '../app/actions/members';
 import { formatVND } from '../lib/money';
 import type { ViewMemberWithQr, ViewSettlementRow } from '../lib/view-types';
 import { ConfirmDialog } from './ConfirmDialog';
-import { BulkAddPanel } from './members/BulkAddPanel';
 import { MemberCard } from './members/MemberCard';
 import { MemberFormPanel } from './members/MemberFormPanel';
+import { RosterPickerPanel } from './members/RosterPickerPanel';
 import { QrLightbox } from './members/QrLightbox';
-import type { MemberFilter, MemberFormValues } from './members/types';
+import type { MemberFilter, MemberFormValues, RosterEntry } from './members/types';
 
 interface MemberViewProps {
   monthKey: string;
   members: ViewMemberWithQr[];
+  /** Everyone ever created, so people can be reused instead of retyped each period. */
+  roster: RosterEntry[];
   settlementRows: ViewSettlementRow[];
   sessionCount: number;
   /** Whether the viewer has write access. The real gate lives in the Server Action. */
@@ -24,11 +31,12 @@ interface MemberViewProps {
 export const MemberView: React.FC<MemberViewProps> = ({
   monthKey,
   members,
+  roster,
   settlementRows,
   sessionCount,
   isAdmin,
 }) => {
-  const [activeTab, setActiveTab] = useState<'list' | 'single' | 'bulk'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'single' | 'pick'>('list');
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   /** Bumped to force the form to remount (clearing its inputs) — only when actually needed. */
   const [formKey, setFormKey] = useState(0);
@@ -78,6 +86,12 @@ export const MemberView: React.FC<MemberViewProps> = ({
     setActiveTab('single');
   };
 
+  const handleStartPick = () => {
+    setEditingMemberId(null);
+    setErrorMessage(null);
+    setActiveTab('pick');
+  };
+
   const handleStartEdit = (m: ViewMemberWithQr) => {
     setEditingMemberId(m.id);
     setErrorMessage(null);
@@ -117,14 +131,10 @@ export const MemberView: React.FC<MemberViewProps> = ({
     );
   };
 
-  const handleBulkAdd = (names: string[]) => {
-    if (names.length === 0) return;
+  const handleAddFromRoster = (memberIds: string[]) => {
+    if (memberIds.length === 0) return;
     run(
-      async () => {
-        for (const n of names) {
-          await createMember(monthKey, { name: n, isPermanent: true });
-        }
-      },
+      () => addExistingMembersToMonth(monthKey, memberIds),
       () => goToList()
     );
   };
@@ -189,7 +199,20 @@ export const MemberView: React.FC<MemberViewProps> = ({
             }`}
           >
             <Users className="h-3.5 w-3.5" />
-            <span>Danh Sách ({members.length})</span>
+            <span>Danh sách ({members.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleStartPick}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'pick'
+                ? 'bg-indigo-600 text-white shadow-2xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            <span>+ Thêm vào kỳ này</span>
           </button>
 
           <button
@@ -201,25 +224,8 @@ export const MemberView: React.FC<MemberViewProps> = ({
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span>{editingMemberId ? 'Sửa thành viên' : '+ Thêm từng người'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setEditingMemberId(null);
-              setErrorMessage(null);
-              setActiveTab('bulk');
-            }}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'bulk'
-                ? 'bg-indigo-600 text-white shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Dán danh sách Zalo</span>
+            <UserRoundPlus className="h-3.5 w-3.5" />
+            <span>{editingMemberId ? 'Sửa thành viên' : 'Tạo người mới'}</span>
           </button>
         </div>
       </div>
@@ -258,62 +264,38 @@ export const MemberView: React.FC<MemberViewProps> = ({
                 />
               </div>
 
+              {/*
+                Neutral chips with only the active one filled. Five differently
+                coloured chips competed with each other and with the amounts,
+                and the colours carried no meaning the labels did not already.
+                A filter that would return nothing is not offered.
+              */}
               <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setFilterType('all')}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
-                    filterType === 'all'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Tất cả ({members.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterType('permanent')}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
-                    filterType === 'permanent'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                  }`}
-                >
-                  Cố định ({permanentCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterType('guest')}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
-                    filterType === 'guest'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                  }`}
-                >
-                  Vãng lai ({guestCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterType('has_qr')}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
-                    filterType === 'has_qr'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                  }`}
-                >
-                  Có QR ({withQrCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterType('no_qr')}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
-                    filterType === 'no_qr'
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-                  }`}
-                >
-                  Chưa có QR ({withoutQrCount})
-                </button>
+                {(
+                  [
+                    { key: 'all', label: `Tất cả (${members.length})`, count: members.length },
+                    { key: 'permanent', label: `Cố định (${permanentCount})`, count: permanentCount },
+                    { key: 'guest', label: `Vãng lai (${guestCount})`, count: guestCount },
+                    { key: 'has_qr', label: `Có QR (${withQrCount})`, count: withQrCount },
+                    { key: 'no_qr', label: `Chưa QR (${withoutQrCount})`, count: withoutQrCount },
+                  ] as const
+                )
+                  .filter((f) => f.key === 'all' || f.count > 0)
+                  .map((f) => (
+                    <button
+                      key={f.key}
+                      type="button"
+                      aria-pressed={filterType === f.key}
+                      onClick={() => setFilterType(f.key)}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                        filterType === f.key
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
               </div>
             </div>
           )}
@@ -335,18 +317,18 @@ export const MemberView: React.FC<MemberViewProps> = ({
                 <div className="flex flex-wrap gap-2 justify-center pt-2">
                   <button
                     type="button"
-                    onClick={handleStartAdd}
+                    onClick={handleStartPick}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition-colors cursor-pointer"
                   >
-                    <UserPlus className="h-3.5 w-3.5" />+ Thêm thành viên
+                    <UserPlus className="h-3.5 w-3.5" />+ Thêm vào kỳ này
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('bulk')}
+                    onClick={handleStartAdd}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                    Dán nhanh danh sách Zalo
+                    <UserRoundPlus className="h-3.5 w-3.5 text-indigo-500" />
+                    Tạo người mới
                   </button>
                 </div>
               )}
@@ -387,13 +369,14 @@ export const MemberView: React.FC<MemberViewProps> = ({
         />
       )}
 
-      {isAdmin && activeTab === 'bulk' && (
-        <BulkAddPanel
-          existingNames={members.map((m) => m.name)}
+      {isAdmin && activeTab === 'pick' && (
+        <RosterPickerPanel
+          roster={roster}
           isPending={isPending}
           errorMessage={errorMessage}
           onCancel={goToList}
-          onSubmit={handleBulkAdd}
+          onSubmit={handleAddFromRoster}
+          onCreateNew={handleStartAdd}
         />
       )}
 

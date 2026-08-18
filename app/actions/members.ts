@@ -115,16 +115,30 @@ export async function removeMemberFromMonth(monthKey: string, memberId: string) 
   revalidatePath(`/${monthKey}`, 'layout');
 }
 
-/** Add an already existing member to the month being viewed. */
-export async function addExistingMemberToMonth(monthKey: string, memberId: string) {
+/**
+ * Tick people from the shared roster into the period being viewed.
+ *
+ * This is the normal way to fill a new period: a person is created once and
+ * reused, so their QR image and phone number follow them instead of having to
+ * be entered again every period.
+ */
+export async function addExistingMembersToMonth(monthKey: string, memberIds: string[]) {
   await requireAdmin();
+
+  const ids = [...new Set(memberIds)];
+  if (ids.length === 0) throw new Error('Chưa chọn ai để thêm');
 
   const [month] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
   if (!month) throw new Error('Không tìm thấy tháng');
 
+  // Reject ids that do not name a real person, rather than letting a foreign id
+  // reach the join table where it would show up as a member nobody can identify.
+  const known = await db.select({ id: members.id }).from(members).where(inArray(members.id, ids));
+  if (known.length !== ids.length) throw new Error('Có thành viên không tồn tại');
+
   await db
     .insert(monthMembers)
-    .values({ monthId: month.id, memberId })
+    .values(ids.map((memberId) => ({ monthId: month.id, memberId })))
     .onConflictDoNothing();
 
   revalidatePath(`/${monthKey}`, 'layout');

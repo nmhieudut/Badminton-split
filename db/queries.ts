@@ -221,3 +221,43 @@ export async function listActiveCourts() {
     .where(eq(courts.isActive, true))
     .orderBy(asc(courts.name));
 }
+
+/**
+ * Every member ever created, flagged with whether they already belong to the
+ * period being viewed.
+ *
+ * Members are one shared roster rather than a per-period list: a person is
+ * created once and ticked into whichever periods they play in. Someone who
+ * belongs to no period at all is a normal state, not leftover data.
+ */
+export async function listRoster(monthKey: string) {
+  const month = await getMonthByKey(monthKey);
+
+  const inMonth = new Set<string>(
+    month
+      ? (
+          await db
+            .select({ memberId: monthMembers.memberId })
+            .from(monthMembers)
+            .where(eq(monthMembers.monthId, month.id))
+        ).map((r) => r.memberId)
+      : []
+  );
+
+  const rows = await db
+    .select({
+      id: members.id,
+      name: members.name,
+      phone: members.phone,
+      qrImagePath: members.qrImagePath,
+      isPermanent: members.isPermanent,
+    })
+    .from(members)
+    .orderBy(asc(members.name));
+
+  return rows.map(({ qrImagePath, ...m }) => ({
+    ...m,
+    hasQr: qrImagePath !== null,
+    inMonth: inMonth.has(m.id),
+  }));
+}

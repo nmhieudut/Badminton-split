@@ -1,4 +1,4 @@
-import type { ViewMemberWithQr, ViewSettlementRow } from '../../lib/view-types';
+import type { RosterEntry, ViewMemberWithQr, ViewSettlementRow } from '../../lib/view-types';
 
 /** Values entered in the add/edit form for a single member. */
 export interface MemberFormValues {
@@ -11,4 +11,4 @@ export interface MemberFormValues {
 
 export type MemberFilter = 'all' | 'permanent' | 'guest' | 'has_qr' | 'no_qr';
 
-export type { ViewMemberWithQr, ViewSettlementRow };
+export type { RosterEntry, ViewMemberWithQr, ViewSettlementRow };
