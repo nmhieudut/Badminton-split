@@ -1,9 +1,15 @@
 'use client';
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { createPortal } from 'react-dom';
-import { Eye, EyeOff, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
 import { createCourt, deleteCourt, toggleCourtActive, updateCourt } from '../app/actions/courts';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import { formatVND, parseVNDInput } from '../lib/money';
 
 export interface CourtRow {
@@ -60,37 +66,16 @@ export function CourtsModal({
     setError(null);
   };
 
-  const content = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="courts-modal-title"
-    >
-      <div
-        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between border-b border-slate-100 p-5">
-          <div>
-            <h2 id="courts-modal-title" className="text-base font-bold text-slate-900">
-              Quản lý sân
-            </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Giá ở đây chỉ là mặc định khi ghi buổi mới. Sửa giá không làm đổi tiền của
-              những buổi đã ghi.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100"
-            aria-label="Đóng"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Quản lý sân</DialogTitle>
+          <DialogDescription>
+            Giá ở đây chỉ là mặc định khi ghi buổi mới. Sửa giá không làm đổi tiền của
+            những buổi đã ghi.
+          </DialogDescription>
+        </DialogHeader>
 
         <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-5">
           {rows.length === 0 && (
@@ -231,11 +216,9 @@ export function CourtsModal({
             </button>
           </div>
 
-          {error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}
+          {error && <p className="mt-2 text-xs font-semibold text-rose-700">{error}</p>}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(content, document.body);
 }

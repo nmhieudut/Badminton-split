@@ -3,9 +3,16 @@
 import React, { useState, useTransition } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { X, Calendar, ChevronLeft, ChevronRight, PlusCircle, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PlusCircle, Loader2 } from 'lucide-react';
 import { createMonth } from '../app/actions/months';
 import { isNavigationError, errorMessage } from '../lib/navigation-error';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 
 interface YearMonthPickerModalProps {
   currentMonthKey: string; // e.g. '2026-08'
@@ -75,35 +82,14 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
   };
 
   return (
-    <div
-      id="year-month-picker-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        id="year-month-picker-content"
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-900 px-6 py-4 text-white">
-          <div className="flex items-center gap-2.5">
-            <Calendar className="h-5 w-5 text-indigo-400" />
-            <div>
-              <h3 className="font-semibold text-lg">Danh Sách 12 Tháng Trong Năm</h3>
-              <p className="text-xs text-slate-400">
-                Chuyển qua lại bất kỳ tháng nào trong năm để ghi buổi đánh và chia tiền
-              </p>
-            </div>
-          </div>
-          <button
-            id="close-year-month-picker-btn"
-            onClick={onClose}
-            className="rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl" id="year-month-picker-content">
+        <DialogHeader>
+          <DialogTitle>Chọn tháng trong năm</DialogTitle>
+          <DialogDescription>
+            Chuyển qua lại bất kỳ tháng nào trong năm để ghi buổi đánh và chia tiền.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Year Navigation Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/80 px-6 py-3">
@@ -252,7 +238,7 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
             </p>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { X, Edit3, Trash2, Check, Calendar, Loader2 } from 'lucide-react';
+import { Trash2, Check, Calendar, Loader2 } from 'lucide-react';
 import type { ViewMonth } from '../lib/view-types';
 import { parseVNDInput } from '../lib/money';
 import { deleteMonth, updateMonth } from '../app/actions/months';
 import { ConfirmDialog } from './ConfirmDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { isNavigationError, errorMessage } from '../lib/navigation-error';
 
 interface EditMonthModalProps {
@@ -69,32 +70,13 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
 
   return (
     <>
-      <div
-        id="edit-month-modal-backdrop"
-        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in"
-        onClick={onClose}
-      >
-        <div
-          id="edit-month-modal-card"
-          className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl transition-all"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-900 px-6 py-4 text-white">
-            <div className="flex items-center gap-2">
-              <Edit3 className="h-5 w-5 text-indigo-400" />
-              <h3 className="font-bold text-lg">Chỉnh Sửa Kỳ Đánh</h3>
-            </div>
-            <button
-              onClick={onClose}
-              className="rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-md" id="edit-month-modal-card">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa kỳ đánh</DialogTitle>
+          </DialogHeader>
 
-          {/* Form Content */}
-          <form onSubmit={handleSave} className="p-6 space-y-4">
+          <form onSubmit={handleSave} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
                 Kỳ tháng / năm
@@ -197,8 +179,8 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
               </p>
             )}
           </form>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {isConfirmDeleting && (
         <ConfirmDialog

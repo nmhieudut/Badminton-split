@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 import { formatVND } from '../lib/money';
 import type { ViewDailySession, ViewMember } from '../lib/view-types';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 
 /**
  * Read-only detail view of a single session.
@@ -62,36 +68,17 @@ export function SessionDetailModal({
 
   const [year, month, day] = session.date.split('-');
 
-  const content = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="session-detail-title"
-    >
-      <div
-        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between border-b border-slate-100 p-5">
-          <div>
-            <h2 id="session-detail-title" className="text-base font-bold text-slate-900">
-              Buổi ngày {day}/{month}/{year}
-            </h2>
-            <p className="mt-0.5 text-xs text-slate-500">{session.courtName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100"
-            aria-label="Đóng"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            Buổi ngày {day}/{month}/{year}
+          </DialogTitle>
+          <DialogDescription>{session.courtName}</DialogDescription>
+        </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
+        <DialogBody className="py-2">
           <div className="divide-y divide-slate-100">
             {row('Tiền sân', formatVND(session.courtFee), `${nameOf(session.courtPayerId)} ứng`)}
             {row(
@@ -149,10 +136,8 @@ export function SessionDetailModal({
               {session.note}
             </p>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(content, document.body);
 }

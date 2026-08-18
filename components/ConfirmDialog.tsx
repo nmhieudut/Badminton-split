@@ -1,7 +1,16 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 
 export type DialogVariant = 'danger' | 'warning' | 'info' | 'success';
 
@@ -17,6 +26,34 @@ export interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
+/*
+ * The variants used raw `red-*` classes, which the theme does not remap — so
+ * the destructive dialog kept Tailwind's stock red while the rest of the app
+ * moved to the clay ramp. They all draw from the theme now.
+ */
+const VARIANTS = {
+  danger: {
+    icon: AlertTriangle,
+    tone: 'bg-rose-50 text-rose-600',
+    confirm: 'bg-rose-600 hover:bg-rose-700',
+  },
+  warning: {
+    icon: AlertCircle,
+    tone: 'bg-amber-50 text-amber-600',
+    confirm: 'bg-amber-600 hover:bg-amber-700',
+  },
+  info: {
+    icon: Info,
+    tone: 'bg-indigo-50 text-indigo-600',
+    confirm: 'bg-indigo-600 hover:bg-indigo-700',
+  },
+  success: {
+    icon: CheckCircle2,
+    tone: 'bg-emerald-50 text-emerald-600',
+    confirm: 'bg-emerald-600 hover:bg-emerald-700',
+  },
+} as const;
+
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   type = 'warning',
@@ -28,95 +65,64 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  if (!isOpen) return null;
-
-  const iconConfig = {
-    danger: {
-      icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
-      bg: 'bg-red-50',
-      btn: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
-      border: 'border-red-100',
-    },
-    warning: {
-      icon: <AlertCircle className="h-6 w-6 text-amber-600" />,
-      bg: 'bg-amber-50',
-      btn: 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-amber-500',
-      border: 'border-amber-100',
-    },
-    info: {
-      icon: <Info className="h-6 w-6 text-indigo-600" />,
-      bg: 'bg-indigo-50',
-      btn: 'bg-indigo-600 hover:bg-indigo-700 text-white focus:ring-indigo-500',
-      border: 'border-indigo-100',
-    },
-    success: {
-      icon: <CheckCircle2 className="h-6 w-6 text-emerald-600" />,
-      bg: 'bg-emerald-50',
-      btn: 'bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-500',
-      border: 'border-emerald-100',
-    },
-  }[type];
+  const variant = VARIANTS[type];
+  const Icon = variant.icon;
 
   return (
-    <div
-      id="confirm-dialog-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in"
-      onClick={onCancel}
-    >
-      <div
-        id="confirm-dialog-card"
-        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl transition-all border border-slate-100 animate-scale-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6">
-          <div className="flex items-start gap-4">
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${iconConfig.bg} ${iconConfig.border} border`}
+    // Radix reports every way of dismissing — Escape, the overlay, the close
+    // button — through onOpenChange, so cancelling has one path rather than one
+    // handler per gesture.
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="sm:max-w-md" id="confirm-dialog-card">
+        <DialogHeader>
+          <div className="flex items-start gap-3">
+            <span
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${variant.tone}`}
             >
-              {iconConfig.icon}
-            </div>
-
-            <div className="flex-1">
-              <h3 className="text-base font-bold text-slate-900 leading-6">{title}</h3>
-              <div className="mt-2 text-xs text-slate-600 leading-relaxed">{message}</div>
-
-              {details && details.length > 0 && (
-                <div className="mt-3 rounded-xl bg-slate-50 p-3 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
-                    Dữ liệu liên quan bị ảnh hưởng:
-                  </span>
-                  <ul className="space-y-1 text-xs text-slate-700">
-                    {details.map((item, idx) => (
-                      <li key={idx} className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription asChild>
+                <div>{message}</div>
+              </DialogDescription>
             </div>
           </div>
-        </div>
+        </DialogHeader>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2.5 bg-slate-50 px-6 py-3.5 border-t border-slate-100">
+        {details && details.length > 0 && (
+          <DialogBody>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Dữ liệu liên quan bị ảnh hưởng
+            </p>
+            <ul className="space-y-1.5 text-xs text-slate-700">
+              {details.map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-slate-400" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </DialogBody>
+        )}
+
+        <DialogFooter>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100 cursor-pointer"
           >
             {cancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-colors shadow-xs ${iconConfig.btn}`}
+            className={`rounded-xl px-4 py-2 text-xs font-bold text-white transition-colors cursor-pointer ${variant.confirm}`}
           >
             {confirmText}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -1,10 +1,18 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Check, Calendar, Users, Plus, Minus, Loader2 } from 'lucide-react';
+import { Check, Users, Plus, Minus, Loader2 } from 'lucide-react';
 import type { DailySessionInput } from '../app/actions/daily-sessions';
 import type { SessionDefaults, ViewDailySession, ViewMember } from '../lib/view-types';
 import { formatVND, parseVNDInput } from '../lib/money';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 
 interface DailySessionModalProps {
   members: ViewMember[];
@@ -207,44 +215,22 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
     'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-hidden';
 
   return (
-    <div
-      id="daily-session-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        id="daily-session-modal-content"
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-900 px-6 py-4 text-white">
-          <div className="flex items-center gap-2.5">
-            <Calendar className="h-5 w-5 text-indigo-400" />
-            <div>
-              <h3 className="font-semibold text-lg">
-                {initialData ? 'Chỉnh Sửa Buổi Đánh Cầu' : 'Ghi Buổi Đánh Cầu'}
-              </h3>
-              <p className="text-xs text-slate-400">
-                Sân đánh, số quả cầu đã dùng và điểm danh người có mặt
-              </p>
-            </div>
-          </div>
-          <button
-            id="close-daily-session-modal-btn"
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl" id="daily-session-modal-content">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData ? 'Chỉnh sửa buổi đánh' : 'Ghi buổi đánh'}
+          </DialogTitle>
+          <DialogDescription>
+            Sân đánh, số quả cầu đã dùng và điểm danh người có mặt.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Form Content */}
         <form
           id="daily-session-form"
           onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto p-6 space-y-5"
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"
         >
           {/* 1. Date & court */}
           <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
@@ -654,8 +640,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
           )}
         </form>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-3">
+        <DialogFooter>
           <button
             type="button"
             onClick={onClose}
@@ -675,10 +660,10 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             ) : (
               <Check className="h-4 w-4" />
             )}
-            {isSaving ? 'Đang lưu...' : initialData ? 'Lưu Thay Đổi' : 'Lưu Buổi Đánh'}
+            {isSaving ? 'Đang lưu...' : initialData ? 'Lưu thay đổi' : 'Lưu buổi đánh'}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
