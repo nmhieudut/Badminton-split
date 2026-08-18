@@ -32,10 +32,11 @@ export async function saveDailySession(monthKey: string, input: DailySessionInpu
   if (!month) throw new Error('Không tìm thấy tháng');
   if (input.attendeeIds.length === 0) throw new Error('Buổi đánh phải có ít nhất một người');
 
-  // Chỉ nhận điểm danh của người thuộc kỳ này. Không có bước lọc này thì id lạ
-  // sẽ lọt vào bảng, tiền chia cho họ không cộng được cho ai và biến mất khỏi
-  // tổng quyết toán mà không có dấu hiệu nào.
-  const trongKy = new Set(
+  // Only accept attendance for people who belong to this period. Without this
+  // filter a foreign id would slip into the table, the share of the cost billed
+  // to them could not be credited to anyone, and it would disappear from the
+  // settlement total without any sign of it.
+  const periodMemberIds = new Set(
     (
       await db
         .select({ memberId: monthMembers.memberId })
@@ -44,12 +45,12 @@ export async function saveDailySession(monthKey: string, input: DailySessionInpu
     ).map((r) => r.memberId)
   );
 
-  const attendeeIds = [...new Set(input.attendeeIds)].filter((id) => trongKy.has(id));
+  const attendeeIds = [...new Set(input.attendeeIds)].filter((id) => periodMemberIds.has(id));
   if (attendeeIds.length === 0) {
     throw new Error('Buổi đánh phải có ít nhất một người thuộc kỳ này');
   }
 
-  const { id, attendeeIds: _boQua, ...fields } = input;
+  const { id, attendeeIds: _ignored, ...fields } = input;
 
   await db.transaction(async (tx) => {
     let sessionId = id;

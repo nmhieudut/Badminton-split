@@ -67,9 +67,9 @@ describe('generateZaloReport', () => {
 
 describe('ngưỡng bỏ qua tiền lẻ dùng chung', () => {
   it('báo cáo và phép quyết toán nhất quán: dưới ngưỡng thì vừa không sinh giao dịch, vừa báo đã đủ', () => {
-    // Số dư 300 đồng: dưới ROUNDING_THRESHOLD nên không có giao dịch nào được
-    // sinh ra. Báo cáo phải nói "ĐÃ ĐỦ" chứ không được nói còn nợ, nếu không
-    // người đọc sẽ đi tìm một khoản chuyển khoản không tồn tại.
+    // A balance of 300 đồng: below ROUNDING_THRESHOLD, so no transfer is
+    // generated. The report must say "ĐÃ ĐỦ" and not that they still owe,
+    // otherwise the reader goes looking for a transfer that does not exist.
     const settlement = calculateSettlement({
       members: [
         { id: 'a', name: 'An' },

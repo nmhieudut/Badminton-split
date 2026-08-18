@@ -7,9 +7,9 @@ import { revalidatePath } from 'next/cache';
 import { createServerSupabaseClient } from '../../lib/supabase/server';
 
 /**
- * Hai action trong tệp này KHÔNG gọi requireAdmin(): chưa đăng nhập thì làm
- * sao là admin được. Đây là ngoại lệ duy nhất, và test quét mã nguồn trong
- * actions-guard.test.ts có ghi nhận điều đó.
+ * The two actions in this file do NOT call requireAdmin(): someone who is not
+ * signed in yet cannot possibly be an admin. This is the only exemption, and
+ * the source-scanning test in actions-guard.test.ts records it.
  */
 
 export async function signInWithGoogle(next: string = '/') {
@@ -28,8 +28,8 @@ export async function signInWithGoogle(next: string = '/') {
     throw new Error('Không mở được trang đăng nhập. Vui lòng thử lại.');
   }
 
-  // redirect() hoạt động bằng cách ném lỗi — không bọc nó trong try/catch.
-  // Ép kiểu vì typedRoutes chỉ biết các tuyến nội bộ, còn đây là URL của Google.
+  // redirect() works by throwing — never wrap it in a try/catch.
+  // Cast because typedRoutes only knows internal routes, and this is a Google URL.
   redirect(data.url as Route);
 }
 

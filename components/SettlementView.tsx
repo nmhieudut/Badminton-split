@@ -358,7 +358,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                             Quét để chuyển {formatVND(t.amount)} cho {t.toMemberName}
                           </p>
                           <div className="mt-2 flex justify-center">
-                            <QrSaveButton url={qrUrl} tenNguoi={t.toMemberName} />
+                            <QrSaveButton url={qrUrl} personName={t.toMemberName} />
                           </div>
                         </>
                       ) : (

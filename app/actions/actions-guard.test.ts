@@ -2,25 +2,26 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const THU_MUC = join(process.cwd(), 'app/actions');
+const ACTIONS_DIR = join(process.cwd(), 'app/actions');
 
 /**
- * auth.ts được miễn: hai action trong đó phục vụ chính việc đăng nhập, chưa
- * đăng nhập thì không thể là admin.
+ * auth.ts is exempt: the two actions in it serve signing in itself, and someone
+ * who is not signed in cannot be an admin.
  */
-const MIEN_TRU = new Set(['auth.ts']);
+const EXEMPT_FILES = new Set(['auth.ts']);
 
-/** Các tệp mà mọi action bên trong BẮT BUỘC phải là requireSuperAdmin(). */
-const CHI_SUPER_ADMIN = new Set(['admins.ts']);
+/** Files where every action inside MUST use requireSuperAdmin(). */
+const SUPER_ADMIN_ONLY_FILES = new Set(['admins.ts']);
 
 /**
- * Các action CỐ Ý mở cho mọi người, kể cả khách chưa đăng nhập.
+ * Actions that are DELIBERATELY open to everyone, guests included.
  *
- * Danh sách này phải rất ngắn, và mỗi dòng phải nêu được lý do. Mục đích của
- * nó không phải để dễ bỏ chốt chặn, mà để việc bỏ chốt chặn trở thành một
- * quyết định có tên, có người viết ra — thay vì một dòng code bị xóa lặng lẽ.
+ * This list must stay very short, and every entry must state its reason. Its
+ * purpose is not to make dropping a guard easy, but to turn dropping a guard
+ * into a named decision that someone wrote down — instead of a line of code
+ * quietly deleted.
  */
-const CONG_KHAI = new Map<string, string>([
+const PUBLIC_ACTIONS = new Map<string, string>([
   [
     'settlement.ts → toggleTransferSettled',
     'Người vừa chuyển tiền tự tích; bắt đăng nhập chỉ để bấm một nút là rào cản lớn hơn giá trị nó bảo vệ.',
@@ -28,86 +29,88 @@ const CONG_KHAI = new Map<string, string>([
 ]);
 
 /**
- * Cắt lấy thân của một hàm.
+ * Extract the body of a function.
  *
- * Phải đi hết danh sách tham số trước rồi mới tìm dấu `{` của thân hàm. Lấy
- * ngay dấu `{` đầu tiên sau tên hàm là sai với những hàm có tham số kiểu
- * object — như `updateMonth(id, fields: { title?: string })` — vì khi đó nó
- * cắt trúng kiểu tham số và bỏ sót cả thân hàm thật.
+ * The parameter list has to be walked through first, and only then do we look
+ * for the `{` that opens the body. Taking the first `{` after the function name
+ * is wrong for functions with an object-typed parameter — such as
+ * `updateMonth(id, fields: { title?: string })` — because it would cut into the
+ * parameter type and miss the real body entirely.
  */
-function functionBody(nguon: string, tenHam: string): string {
-  const bd = nguon.indexOf(`export async function ${tenHam}`);
-  if (bd === -1) return '';
+function functionBody(source: string, functionName: string): string {
+  const start = source.indexOf(`export async function ${functionName}`);
+  if (start === -1) return '';
 
-  // Đi qua danh sách tham số, đếm ngoặc tròn cho tới khi đóng hết.
-  const moTron = nguon.indexOf('(', bd);
-  let sauTron = 0;
-  let i = moTron;
-  for (; i < nguon.length; i += 1) {
-    if (nguon[i] === '(') sauTron += 1;
-    if (nguon[i] === ')') {
-      sauTron -= 1;
-      if (sauTron === 0) break;
+  // Walk the parameter list, counting parentheses until they all close.
+  const parenStart = source.indexOf('(', start);
+  let openParens = 0;
+  let i = parenStart;
+  for (; i < source.length; i += 1) {
+    if (source[i] === '(') openParens += 1;
+    if (source[i] === ')') {
+      openParens -= 1;
+      if (openParens === 0) break;
     }
   }
 
-  const moNgoac = nguon.indexOf('{', i);
-  if (moNgoac === -1) return '';
+  const bodyStart = source.indexOf('{', i);
+  if (bodyStart === -1) return '';
 
-  let sau = 0;
-  for (let j = moNgoac; j < nguon.length; j += 1) {
-    if (nguon[j] === '{') sau += 1;
-    if (nguon[j] === '}') {
-      sau -= 1;
-      if (sau === 0) return nguon.slice(moNgoac, j + 1);
+  let openBraces = 0;
+  for (let j = bodyStart; j < source.length; j += 1) {
+    if (source[j] === '{') openBraces += 1;
+    if (source[j] === '}') {
+      openBraces -= 1;
+      if (openBraces === 0) return source.slice(bodyStart, j + 1);
     }
   }
-  return nguon.slice(moNgoac);
+  return source.slice(bodyStart);
 }
 
 describe('mọi Server Action ghi dữ liệu đều có chốt chặn', () => {
-  const tepCanKiem = readdirSync(THU_MUC)
+  const filesToCheck = readdirSync(ACTIONS_DIR)
     .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))
-    .filter((f) => !MIEN_TRU.has(f));
+    .filter((f) => !EXEMPT_FILES.has(f));
 
   it('tìm thấy các tệp action để kiểm', () => {
-    expect(tepCanKiem.length).toBeGreaterThan(0);
+    expect(filesToCheck.length).toBeGreaterThan(0);
   });
 
-  for (const tep of tepCanKiem) {
-    const nguon = readFileSync(join(THU_MUC, tep), 'utf8');
-    const tenHam = [...nguon.matchAll(/export async function (\w+)/g)].map((m) => m[1]);
+  for (const file of filesToCheck) {
+    const source = readFileSync(join(ACTIONS_DIR, file), 'utf8');
+    const functionNames = [...source.matchAll(/export async function (\w+)/g)].map((m) => m[1]);
 
-    it(`${tep} có ít nhất một action`, () => {
-      expect(tenHam.length).toBeGreaterThan(0);
+    it(`${file} có ít nhất một action`, () => {
+      expect(functionNames.length).toBeGreaterThan(0);
     });
 
-    const chiSuperAdmin = CHI_SUPER_ADMIN.has(tep);
+    const superAdminOnly = SUPER_ADMIN_ONLY_FILES.has(file);
 
-    for (const ten of tenHam) {
-      const khoa = `${tep} → ${ten}`;
+    for (const name of functionNames) {
+      const key = `${file} → ${name}`;
 
-      if (CONG_KHAI.has(khoa)) {
-        it(`${khoa}() được khai báo là công khai, kèm lý do`, () => {
-          // Không kiểm chốt chặn, nhưng bắt buộc phải có lý do viết ra.
-          expect(CONG_KHAI.get(khoa)!.length).toBeGreaterThan(20);
+      if (PUBLIC_ACTIONS.has(key)) {
+        it(`${key}() được khai báo là công khai, kèm lý do`, () => {
+          // The guard is not checked here, but a written reason is mandatory.
+          expect(PUBLIC_ACTIONS.get(key)!.length).toBeGreaterThan(20);
         });
         continue;
       }
 
-      it(`${tep} → ${ten}() có chốt chặn`, () => {
-        const than = functionBody(nguon, ten);
+      it(`${file} → ${name}() có chốt chặn`, () => {
+        const body = functionBody(source, name);
         expect(
-          than.includes('requireAdmin()') || than.includes('requireSuperAdmin()')
+          body.includes('requireAdmin()') || body.includes('requireSuperAdmin()')
         ).toBe(true);
       });
 
-      if (chiSuperAdmin) {
-        // Kiểm riêng, vì phép kiểm "có chốt chặn nào đó" ở trên vẫn xanh khi ai
-        // đó hạ requireSuperAdmin() xuống requireAdmin() — mà đó chính là lỗi
-        // xóa mất ranh giới giữa hai nhóm quyền.
-        it(`${tep} → ${ten}() dùng đúng requireSuperAdmin()`, () => {
-          expect(functionBody(nguon, ten)).toContain('requireSuperAdmin()');
+      if (superAdminOnly) {
+        // Checked separately, because the "has some guard" assertion above stays
+        // green when someone downgrades requireSuperAdmin() to requireAdmin() —
+        // which is exactly the mistake that erases the boundary between the two
+        // permission groups.
+        it(`${file} → ${name}() dùng đúng requireSuperAdmin()`, () => {
+          expect(functionBody(source, name)).toContain('requireSuperAdmin()');
         });
       }
     }

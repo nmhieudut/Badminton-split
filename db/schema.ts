@@ -101,11 +101,12 @@ export const settledTransfers = pgTable(
 );
 
 /**
- * Admin do super admin thêm vào. Super admin thì đến từ biến môi trường
- * ADMIN_EMAILS, không nằm ở đây — quyền cao nhất không được sửa qua giao diện.
+ * Admins added by a super admin. Super admins come from the ADMIN_EMAILS
+ * environment variable and are not stored here — the highest privilege must not
+ * be editable through the UI.
  *
- * Email làm khóa chính vì đó chính là thứ Google trả về và là thứ ta so khớp.
- * Luôn lưu dạng chữ thường, chuẩn hóa ngay lúc ghi.
+ * Email is the primary key because it is exactly what Google returns and what
+ * we match on. Always stored lowercase, normalized at write time.
  */
 export const admins = pgTable('admins', {
   email: text('email').primaryKey(),
@@ -114,17 +115,18 @@ export const admins = pgTable('admins', {
 });
 
 /**
- * Sân hay chơi, dùng làm danh sách chọn khi ghi buổi đánh.
+ * The courts regularly played at, used as the picklist when recording a session.
  *
- * Buổi đánh KHÔNG trỏ tới bảng này: nó chép lại tên và giá tại thời điểm ghi.
- * Nhờ vậy sửa giá một sân không làm đổi số tiền của những buổi đã chốt — bảng
- * này chỉ là nơi lấy giá trị mặc định cho nhanh.
+ * A session does NOT reference this table: it copies the name and fee as they
+ * were at the time of recording. That way editing a court's fee never changes
+ * the amounts of sessions already settled — this table is only a convenient
+ * source of default values.
  */
 export const courts = pgTable('courts', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
   defaultFee: bigint('default_fee', { mode: 'number' }).notNull().default(0),
-  /** Nghỉ chơi sân nào thì tắt cờ này — ẩn khỏi dropdown mà không mất lịch sử. */
+  /** Stop playing at a court and this flag goes off — hidden from the dropdown without losing history. */
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -1,8 +1,9 @@
 import type { getMonthData, getSessionDefaults } from '../db/queries';
 
 /**
- * Kiểu dữ liệu mà giao diện nhận được, suy trực tiếp từ hàm truy vấn để không
- * bao giờ lệch nhau. Component chỉ hiển thị — mọi phép tính đã xong ở server.
+ * The shapes the UI receives, inferred directly from the query functions so the
+ * two can never drift apart. Components only render — every calculation has
+ * already happened on the server.
  */
 export type MonthData = NonNullable<Awaited<ReturnType<typeof getMonthData>>>;
 
@@ -15,5 +16,5 @@ export type ViewMonth = MonthData['month'];
 
 export type SessionDefaults = Awaited<ReturnType<typeof getSessionDefaults>>;
 
-/** Thành viên kèm signed URL của ảnh QR, dùng ở tab Thành viên và Quyết toán. */
+/** A member plus the signed URL of their QR image, used by the Members and Settlement tabs. */
 export type ViewMemberWithQr = ViewMember & { qrUrl: string | null };

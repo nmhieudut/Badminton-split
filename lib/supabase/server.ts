@@ -3,10 +3,10 @@ import { cookies } from 'next/headers';
 import { ConfigError } from '../errors';
 
 /**
- * Supabase client dùng trong Server Component, Server Action và Route Handler.
+ * Supabase client for Server Components, Server Actions and Route Handlers.
  *
- * CHỈ dùng getAll/setAll cho cookie. Các API get/set/remove kiểu cũ gây ra
- * chuyện người dùng bị đăng xuất ngẫu nhiên và rất khó truy nguyên.
+ * ONLY getAll/setAll may be used for cookies. The older get/set/remove APIs
+ * cause users to be signed out at random, and the cause is very hard to trace.
  */
 export async function createServerSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,8 +30,8 @@ export async function createServerSupabaseClient() {
             cookieStore.set(name, value, options)
           );
         } catch {
-          // Server Component không được ghi cookie. Bỏ qua an toàn vì
-          // middleware đã lo việc làm mới phiên.
+          // A Server Component is not allowed to write cookies. Safe to
+          // ignore, because the middleware already refreshes the session.
         }
       },
     },

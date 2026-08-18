@@ -81,8 +81,9 @@ describe('calculateSettlement', () => {
 
 
   it('không sinh giao dịch khi chênh lệch dưới ngưỡng tiền lẻ', () => {
-    // Sân 600đ chia đôi: mỗi người chịu 300, người ứng tiền dôi ra 300 — dưới
-    // ngưỡng 500 nên không đáng bắt ai chuyển khoản.
+    // A 600đ court fee split two ways: each owes 300, and whoever fronted the
+    // money is 300 up — below the 500 threshold, so not worth asking anyone to
+    // make a transfer.
     const out = calculateSettlement({
       members: [
         { id: 'a', name: 'An' },
@@ -123,16 +124,17 @@ describe('calculateSettlement', () => {
 });
 
 describe('điểm danh mồ côi — id không thuộc danh sách thành viên', () => {
-  // Buổi đánh có thể chứa id của người đã bị gỡ khỏi kỳ, hoặc id lấy nhầm từ
-  // kỳ khác qua getSessionDefaults. Trước đây allocate() chia cho toàn bộ id
-  // trong attendeeIds nhưng chỉ cộng được cho người có trong members, nên phần
-  // của các id lạ biến mất: 200.000 chia 11 chỉ cộng về 90.910.
+  // A session can hold the id of someone removed from the period, or an id
+  // picked up by mistake from another period via getSessionDefaults. allocate()
+  // used to divide across every id in attendeeIds while only crediting people
+  // present in members, so the strangers' shares disappeared: 200.000 split 11
+  // ways only added back up to 90.910.
   const members = [
     { id: 'a', name: 'An' },
     { id: 'b', name: 'Bình' },
   ];
 
-  const buoi = {
+  const sessionWithStrangers = {
     id: 'ds1',
     date: '2026-08-16',
     courtFee: 100000,
@@ -149,17 +151,17 @@ describe('điểm danh mồ côi — id không thuộc danh sách thành viên',
   };
 
   it('không để thất thoát đồng nào khi có id lạ', () => {
-    const out = calculateSettlement({ members, dailySessions: [buoi] });
+    const out = calculateSettlement({ members, dailySessions: [sessionWithStrangers] });
     expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(200000);
   });
 
   it('tổng số dư ròng vẫn bằng không', () => {
-    const out = calculateSettlement({ members, dailySessions: [buoi] });
+    const out = calculateSettlement({ members, dailySessions: [sessionWithStrangers] });
     expect(out.rows.reduce((s, r) => s + r.netBalance, 0)).toBe(0);
   });
 
   it('chia đều cho những người thật sự có trong kỳ', () => {
-    const out = calculateSettlement({ members, dailySessions: [buoi] });
+    const out = calculateSettlement({ members, dailySessions: [sessionWithStrangers] });
     expect(out.rows.find((r) => r.memberId === 'a')!.totalShare).toBe(100000);
     expect(out.rows.find((r) => r.memberId === 'b')!.totalShare).toBe(100000);
   });
@@ -167,7 +169,7 @@ describe('điểm danh mồ côi — id không thuộc danh sách thành viên',
   it('bỏ hết id lạ thì coi như buổi không ghi điểm danh, chia cho cả nhóm', () => {
     const out = calculateSettlement({
       members,
-      dailySessions: [{ ...buoi, attendeeIds: ['nguoi-la-1', 'nguoi-la-2'] }],
+      dailySessions: [{ ...sessionWithStrangers, attendeeIds: ['nguoi-la-1', 'nguoi-la-2'] }],
     });
     expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(200000);
   });

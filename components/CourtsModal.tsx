@@ -20,16 +20,16 @@ export function CourtsModal({
   rows: CourtRow[];
   onClose: () => void;
 }) {
-  const [tenMoi, setTenMoi] = useState('');
-  const [giaMoi, setGiaMoi] = useState('');
-  const [dangSua, setDangSua] = useState<string | null>(null);
-  const [tenSua, setTenSua] = useState('');
-  const [giaSua, setGiaSua] = useState('');
-  const [loi, setLoi] = useState<string | null>(null);
-  const [dangChay, startTransition] = useTransition();
-  const [daGanVaoDom, setDaGanVaoDom] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newFee, setNewFee] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editFee, setEditFee] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => setDaGanVaoDom(true), []);
+  useEffect(() => setIsMounted(true), []);
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
@@ -39,28 +39,28 @@ export function CourtsModal({
     return () => document.removeEventListener('keydown', esc);
   }, [onClose]);
 
-  if (!daGanVaoDom) return null;
+  if (!isMounted) return null;
 
-  const chay = (fn: () => Promise<void>, xong?: () => void) => {
-    setLoi(null);
+  const run = (fn: () => Promise<void>, onDone?: () => void) => {
+    setError(null);
     startTransition(async () => {
       try {
         await fn();
-        xong?.();
+        onDone?.();
       } catch (e) {
-        setLoi(e instanceof Error ? e.message : 'Không lưu được.');
+        setError(e instanceof Error ? e.message : 'Không lưu được.');
       }
     });
   };
 
-  const batDauSua = (s: CourtRow) => {
-    setDangSua(s.id);
-    setTenSua(s.name);
-    setGiaSua(String(s.defaultFee));
-    setLoi(null);
+  const startEdit = (s: CourtRow) => {
+    setEditingId(s.id);
+    setEditName(s.name);
+    setEditFee(String(s.defaultFee));
+    setError(null);
   };
 
-  const noiDung = (
+  const content = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={onClose}
@@ -100,18 +100,18 @@ export function CourtsModal({
           )}
 
           {rows.map((s) =>
-            dangSua === s.id ? (
+            editingId === s.id ? (
               <li key={s.id} className="rounded-xl border border-indigo-300 bg-indigo-50/40 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
-                    value={tenSua}
-                    onChange={(e) => setTenSua(e.target.value)}
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
                     className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-hidden"
                     placeholder="Tên sân"
                   />
                   <input
-                    value={giaSua}
-                    onChange={(e) => setGiaSua(e.target.value)}
+                    value={editFee}
+                    onChange={(e) => setEditFee(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm sm:w-32 focus:border-indigo-400 focus:outline-hidden"
                     placeholder="180k"
                   />
@@ -119,15 +119,15 @@ export function CourtsModal({
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
-                    disabled={dangChay}
+                    disabled={isPending}
                     onClick={() =>
-                      chay(
+                      run(
                         () =>
                           updateCourt(s.id, {
-                            name: tenSua,
-                            defaultFee: parseVNDInput(giaSua),
+                            name: editName,
+                            defaultFee: parseVNDInput(editFee),
                           }),
-                        () => setDangSua(null)
+                        () => setEditingId(null)
                       )
                     }
                     className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-60"
@@ -136,7 +136,7 @@ export function CourtsModal({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setDangSua(null)}
+                    onClick={() => setEditingId(null)}
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                   >
                     Hủy
@@ -167,8 +167,8 @@ export function CourtsModal({
                 <span className="flex shrink-0 items-center gap-0.5">
                   <button
                     type="button"
-                    disabled={dangChay}
-                    onClick={() => batDauSua(s)}
+                    disabled={isPending}
+                    onClick={() => startEdit(s)}
                     className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 disabled:opacity-60"
                     aria-label={`Sửa ${s.name}`}
                   >
@@ -176,8 +176,8 @@ export function CourtsModal({
                   </button>
                   <button
                     type="button"
-                    disabled={dangChay}
-                    onClick={() => chay(() => toggleCourtActive(s.id, !s.isActive))}
+                    disabled={isPending}
+                    onClick={() => run(() => toggleCourtActive(s.id, !s.isActive))}
                     className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 disabled:opacity-60"
                     aria-label={s.isActive ? `Tắt ${s.name}` : `Bật lại ${s.name}`}
                   >
@@ -185,8 +185,8 @@ export function CourtsModal({
                   </button>
                   <button
                     type="button"
-                    disabled={dangChay}
-                    onClick={() => chay(() => deleteCourt(s.id))}
+                    disabled={isPending}
+                    onClick={() => run(() => deleteCourt(s.id))}
                     className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-60"
                     aria-label={`Xóa ${s.name}`}
                   >
@@ -201,26 +201,26 @@ export function CourtsModal({
         <div className="border-t border-slate-100 p-5">
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
-              value={tenMoi}
-              onChange={(e) => setTenMoi(e.target.value)}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
               placeholder="Tên sân, ví dụ Arena 3"
               className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-hidden"
             />
             <input
-              value={giaMoi}
-              onChange={(e) => setGiaMoi(e.target.value)}
+              value={newFee}
+              onChange={(e) => setNewFee(e.target.value)}
               placeholder="180k"
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm sm:w-32 focus:border-indigo-400 focus:outline-hidden"
             />
             <button
               type="button"
-              disabled={dangChay || !tenMoi.trim()}
+              disabled={isPending || !newName.trim()}
               onClick={() =>
-                chay(
-                  () => createCourt({ name: tenMoi, defaultFee: parseVNDInput(giaMoi) }),
+                run(
+                  () => createCourt({ name: newName, defaultFee: parseVNDInput(newFee) }),
                   () => {
-                    setTenMoi('');
-                    setGiaMoi('');
+                    setNewName('');
+                    setNewFee('');
                   }
                 )
               }
@@ -231,11 +231,11 @@ export function CourtsModal({
             </button>
           </div>
 
-          {loi && <p className="mt-2 text-xs font-semibold text-rose-600">{loi}</p>}
+          {error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}
         </div>
       </div>
     </div>
   );
 
-  return createPortal(noiDung, document.body);
+  return createPortal(content, document.body);
 }

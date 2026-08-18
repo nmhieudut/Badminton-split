@@ -22,19 +22,22 @@ export default async function MonthLayout({
   const data = await getMonthData(monthKey);
   const monthKeys = await listMonthKeys();
 
-  const [user, vaiTro] = await Promise.all([getSessionUser(), getRole()]);
-  const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
-  const isSuperAdmin = vaiTro === 'super_admin';
+  const [user, role] = await Promise.all([getSessionUser(), getRole()]);
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const isSuperAdmin = role === 'super_admin';
 
-  // Chỉ truy vấn khi thật sự cần: khách và admin thường không thấy màn hình này.
-  // Ngày định dạng ngay ở server để trình duyệt khác múi giờ không hiện lệch.
+  // Only queried when it is really needed: guests and ordinary admins never see
+  // this screen. Dates are formatted on the server so a browser in another time
+  // zone does not show them shifted.
   /*
-    Danh sách cho màn hình quản lý quyền: gộp ba nguồn để không sót ai.
-      - ADMIN_EMAILS  → super admin, không đổi được từ giao diện
-      - bảng admins   → người đã được cấp quyền
-      - auth.users    → mọi người đã từng đăng nhập
-    Người được cấp quyền trước khi kịp đăng nhập vẫn phải hiện ra, kèm ghi chú,
-    nếu không super admin sẽ tưởng thao tác cấp quyền của mình không ăn.
+    The list for the permissions screen: three sources merged so nobody is left
+    out.
+      - ADMIN_EMAILS  → super admins, not changeable from the UI
+      - admins table  → people who have been granted the role
+      - auth.users    → everyone who has ever signed in
+    Someone granted the role before they got around to signing in must still show
+    up, with a note, otherwise the super admin would think their grant did not
+    take effect.
   */
   let users: UserRow[] = [];
 
@@ -46,36 +49,37 @@ export default async function MonthLayout({
         .filter(Boolean)
     );
     const adminEmails = new Set((await listAdmins()).map((a) => a.email));
-    const taiKhoan = await listAuthUsers();
-    const daBiet = new Map(taiKhoan.map((u) => [u.email, u]));
+    const authUsers = await listAuthUsers();
+    const knownUsers = new Map(authUsers.map((u) => [u.email, u]));
 
-    const vaiTroCua = (email: string): RowRole =>
-      superEmails.has(email) ? 'super_admin' : adminEmails.has(email) ? 'admin' : 'chi_xem';
+    const roleFor = (email: string): RowRole =>
+      superEmails.has(email) ? 'super_admin' : adminEmails.has(email) ? 'admin' : 'viewer';
 
-    const moiEmail = new Set([...superEmails, ...adminEmails, ...daBiet.keys()]);
+    const allEmails = new Set([...superEmails, ...adminEmails, ...knownUsers.keys()]);
 
-    users = [...moiEmail]
+    users = [...allEmails]
       .map((email) => {
-        const u = daBiet.get(email);
+        const u = knownUsers.get(email);
         return {
           email,
-          ten: u?.ten ?? null,
-          anhDaiDien: u?.anhDaiDien ?? null,
-          vaiTro: vaiTroCua(email),
-          lanCuoi: u?.lanCuoi ?? null,
+          name: u?.name ?? null,
+          avatarUrl: u?.avatarUrl ?? null,
+          role: roleFor(email),
+          lastSignInAt: u?.lastSignInAt ?? null,
         };
       })
-      // Người có quyền lên trước, rồi tới người chỉ xem.
+      // People with a role come first, then the view-only ones.
       .sort((a, b) => {
-        const hang = { super_admin: 0, admin: 1, chi_xem: 2 } as const;
+        const rank = { super_admin: 0, admin: 1, viewer: 2 } as const;
         return (
-          hang[a.vaiTro] - hang[b.vaiTro] ||
-          (a.ten ?? a.email).localeCompare(b.ten ?? b.email, 'vi')
+          rank[a.role] - rank[b.role] ||
+          (a.name ?? a.email).localeCompare(b.name ?? b.email, 'vi')
         );
       });
   }
 
-  // Chỉ admin mới mở được màn hình quản lý sân, nên khách khỏi tốn truy vấn.
+  // Only admins can open the courts management screen, so guests do not pay for
+  // the query.
   const courts: CourtRow[] = isAdmin ? await listCourts() : [];
   const unsettledCount = data
     ? data.settlement.transfers.filter((t) => !t.isSettled).length
@@ -90,8 +94,8 @@ export default async function MonthLayout({
         memberCount={data?.members.length ?? 0}
         unsettledCount={unsettledCount}
         email={user?.email ?? null}
-        ten={user?.ten ?? null}
-        anhDaiDien={user?.anhDaiDien ?? null}
+        name={user?.name ?? null}
+        avatarUrl={user?.avatarUrl ?? null}
         isAdmin={isAdmin}
         isSuperAdmin={isSuperAdmin}
         users={users}
@@ -99,14 +103,15 @@ export default async function MonthLayout({
       />
 
       {/*
-        pb-24 trên điện thoại để thanh tab cố định dưới đáy không che mất nội
-        dung cuối trang; từ lg trở lên thanh đó biến mất nên không cần chừa.
+        pb-24 on phones so the tab bar pinned to the bottom does not cover the
+        content at the end of the page; from lg up that bar disappears, so no
+        space needs to be reserved.
       */}
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-3.5 pb-24 pt-4 sm:space-y-5 sm:px-6 sm:pt-5 lg:pb-10">
         {/*
-          Tháng chưa có kỳ là trạng thái bình thường, không phải lỗi — nên hiện
-          lời mời tạo kỳ thay vì trang 404, và không render children (các trang
-          tab đều cần dữ liệu của kỳ).
+          A month with no period yet is a normal state, not an error — so we show
+          an invitation to create the period instead of a 404 page, and do not
+          render children (every tab page needs the period's data).
         */}
         {data ? children : <EmptyMonth monthKey={monthKey} isAdmin={isAdmin} />}
       </main>

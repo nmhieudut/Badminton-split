@@ -35,9 +35,9 @@ export const QrLightbox: React.FC<QrLightboxProps> = ({ name, url, onClose }) =>
         alt={`QR ${name}`}
         className="max-h-72 w-full object-contain rounded-xl bg-white p-2 border border-slate-200"
       />
-      {/* App ngân hàng cho tải ảnh QR lên, nên phải lưu được về máy. */}
+      {/* Banking apps let you upload a QR image, so saving it to the device has to work. */}
       <div className="flex justify-center">
-        <QrSaveButton url={url} tenNguoi={name} />
+        <QrSaveButton url={url} personName={name} />
       </div>
 
       <button

@@ -32,9 +32,9 @@ interface NavbarProps {
   /** Email of the signed-in user, null for guests. */
   email: string | null;
   /** Display name from Google, may be empty. */
-  ten: string | null;
+  name: string | null;
   /** Google avatar image, may be empty. */
-  anhDaiDien: string | null;
+  avatarUrl: string | null;
   /** True for both admin and super admin — gates every write-action control. */
   isAdmin: boolean;
   /** Gates exactly one thing: the role management entry in the utility menu. */
@@ -63,8 +63,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   memberCount,
   unsettledCount,
   email,
-  ten,
-  anhDaiDien,
+  name,
+  avatarUrl,
   isAdmin,
   isSuperAdmin,
   users,
@@ -180,8 +180,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex shrink-0 items-center gap-2">
             <AuthButton
               email={email}
-              ten={ten}
-              anhDaiDien={anhDaiDien}
+              name={name}
+              avatarUrl={avatarUrl}
               isAdmin={isAdmin}
               isSuperAdmin={isSuperAdmin}
               canEditPeriod={month !== null}

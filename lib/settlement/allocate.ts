@@ -1,7 +1,9 @@
 /**
- * Chia `total` đồng cho các thành viên sao cho tổng các phần chia bằng đúng
- * `total`, không sai một đồng. Phần dư được phát mỗi người một đồng theo thứ
- * tự id đã sắp xếp, nên kết quả không đổi giữa các lần chạy.
+ * Splits `total` đồng across the given members so that the shares add back up
+ * to exactly `total`, never off by a single đồng. This is a largest-remainder
+ * split: everyone gets the floor, then the remainder is handed out one đồng at
+ * a time in sorted id order, so the result is identical on every run. A plain
+ * float division would not hold — splitting 200.000 six ways used to lose 2đ.
  */
 export function allocate(total: number, memberIds: string[]): Map<string, number> {
   const result = new Map<string, number>();

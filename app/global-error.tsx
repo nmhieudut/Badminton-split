@@ -3,10 +3,11 @@
 import { useEffect } from 'react';
 
 /**
- * Bắt cả lỗi xảy ra trong layout gốc — chỗ mà app/error.tsx không với tới.
+ * Catches errors thrown in the root layout as well — the place app/error.tsx
+ * cannot reach.
  *
- * Vì layout gốc đã hỏng nên tệp này phải tự dựng lại <html> và <body>, và
- * không dùng được bất cứ thứ gì từ layout.
+ * Because the root layout itself is broken, this file has to render its own
+ * <html> and <body> and cannot use anything from the layout.
  */
 export default function GlobalError({
   error,

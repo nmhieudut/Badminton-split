@@ -41,7 +41,7 @@ describe('mọi nơi gọi Server Action đều bắt lỗi', () => {
     it(`${name} có bắt lỗi`, () => {
       const source = readFileSync(f, 'utf8');
       // Either it catches itself, or it only receives the action through a prop
-      // and something else catches (Navbar just opens a modal, for example)., hoặc chỉ nhận action qua prop rồi để nơi khác bắt
+      // and something else catches (Navbar just opens a modal, for example).
       expect(source.includes('catch')).toBe(true);
     });
   }

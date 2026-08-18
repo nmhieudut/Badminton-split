@@ -9,11 +9,11 @@ import { LoginModal } from './LoginModal';
 
 export interface AuthButtonProps {
   email: string | null;
-  ten: string | null;
-  anhDaiDien: string | null;
+  name: string | null;
+  avatarUrl: string | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  /** Chỉ hiện mục sửa kỳ khi tháng đang xem thật sự có kỳ. */
+  /** Only show the edit-period entry when the month being viewed actually has a period. */
   canEditPeriod: boolean;
   onOpenEditMonth: () => void;
   onOpenCourts: () => void;
@@ -22,8 +22,8 @@ export interface AuthButtonProps {
 
 export function AuthButton({
   email,
-  ten,
-  anhDaiDien,
+  name,
+  avatarUrl,
   isAdmin,
   isSuperAdmin,
   canEditPeriod,
@@ -31,108 +31,109 @@ export function AuthButton({
   onOpenCourts,
   onOpenAdmins,
 }: AuthButtonProps) {
-  const [moModal, setMoModal] = useState(false);
-  const [moMenu, setMoMenu] = useState(false);
-  const [dangChay, startTransition] = useTransition();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSigningOut, startTransition] = useTransition();
   const pathname = usePathname();
-  const boc = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   /*
-    Đóng menu bằng listener trên document, không dùng lớp phủ `fixed inset-0`.
-    Header có backdrop-blur, mà backdrop-filter tạo containing block cho con
-    cháu position:fixed — lớp phủ như vậy chỉ trùm đúng cái header, bấm vào
-    nội dung trang sẽ không đóng được menu.
+    Close the menu with a listener on document rather than a `fixed inset-0`
+    overlay. The header uses backdrop-blur, and backdrop-filter creates a
+    containing block for position:fixed descendants — such an overlay would only
+    cover the header itself, so clicking the page content would not close the menu.
   */
   useEffect(() => {
-    if (!moMenu) return;
+    if (!isMenuOpen) return;
 
-    const ngoai = (e: MouseEvent) => {
-      if (boc.current && !boc.current.contains(e.target as Node)) setMoMenu(false);
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node))
+        setIsMenuOpen(false);
     };
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMoMenu(false);
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMenuOpen(false);
     };
 
-    document.addEventListener('mousedown', ngoai);
-    document.addEventListener('keydown', esc);
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onEscape);
     return () => {
-      document.removeEventListener('mousedown', ngoai);
-      document.removeEventListener('keydown', esc);
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onEscape);
     };
-  }, [moMenu]);
+  }, [isMenuOpen]);
 
   if (!email) {
     return (
       <>
         <button
           type="button"
-          onClick={() => setMoModal(true)}
+          onClick={() => setIsLoginOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:text-indigo-600"
         >
           <LogIn className="h-3.5 w-3.5" />
           <span>Đăng nhập</span>
         </button>
-        {moModal && <LoginModal next={pathname} onClose={() => setMoModal(false)} />}
+        {isLoginOpen && <LoginModal next={pathname} onClose={() => setIsLoginOpen(false)} />}
       </>
     );
   }
 
-  const tenHienThi = ten ?? email;
-  const chuCaiDau = (ten ?? email).charAt(0).toUpperCase();
-  const nhan = isSuperAdmin ? 'Chủ nhóm' : isAdmin ? 'Quản lý' : 'Thành viên';
+  const displayName = name ?? email;
+  const initial = (name ?? email).charAt(0).toUpperCase();
+  const roleLabel = isSuperAdmin ? 'Chủ nhóm' : isAdmin ? 'Quản lý' : 'Thành viên';
 
   return (
-    <div className="relative shrink-0" ref={boc}>
+    <div className="relative shrink-0" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setMoMenu((v) => !v)}
-        aria-expanded={moMenu}
+        onClick={() => setIsMenuOpen((v) => !v)}
+        aria-expanded={isMenuOpen}
         aria-haspopup="menu"
-        aria-label={`Tài khoản: ${tenHienThi}`}
+        aria-label={`Tài khoản: ${displayName}`}
         className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white py-1 pl-1 pr-1.5 transition-colors hover:bg-slate-50 sm:pr-2.5"
       >
-        {anhDaiDien ? (
-          // Ảnh Google, dùng thẻ img thường: URL đổi theo tài khoản nên không
-          // đáng khai báo remotePatterns cho next/image.
+        {avatarUrl ? (
+          // Google avatar, using a plain img tag: the URL varies per account, so
+          // declaring remotePatterns for next/image is not worth it.
           <img
-            src={anhDaiDien}
+            src={avatarUrl}
             alt=""
             className="h-7 w-7 rounded-lg object-cover"
             referrerPolicy="no-referrer"
           />
         ) : (
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
-            {chuCaiDau}
+            {initial}
           </span>
         )}
 
-        {/* Tên chỉ hiện từ màn hình vừa trở lên; điện thoại chỉ còn ảnh. */}
+        {/* The name only shows from medium screens up; phones get just the avatar. */}
         <span className="hidden max-w-[10rem] truncate text-xs font-semibold text-slate-700 sm:inline">
-          {tenHienThi}
+          {displayName}
         </span>
       </button>
 
-      {moMenu && (
+      {isMenuOpen && (
         <div
           role="menu"
           className="absolute right-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl"
         >
           <div className="flex items-center gap-2.5 px-2.5 py-2">
-            {anhDaiDien ? (
+            {avatarUrl ? (
               <img
-                src={anhDaiDien}
+                src={avatarUrl}
                 alt=""
                 className="h-9 w-9 shrink-0 rounded-xl object-cover"
                 referrerPolicy="no-referrer"
               />
             ) : (
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white">
-                {chuCaiDau}
+                {initial}
               </span>
             )}
             <span className="min-w-0">
-              {ten && (
-                <span className="block truncate text-sm font-bold text-slate-900">{ten}</span>
+              {name && (
+                <span className="block truncate text-sm font-bold text-slate-900">{name}</span>
               )}
               <span className="block truncate text-[11px] text-slate-500">{email}</span>
             </span>
@@ -147,7 +148,7 @@ export function AuthButton({
               }`}
             >
               {isAdmin && <ShieldCheck className="h-3 w-3" />}
-              {nhan}
+              {roleLabel}
             </span>
             {!isAdmin && (
               <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
@@ -163,7 +164,7 @@ export function AuthButton({
                   type="button"
                   role="menuitem"
                   onClick={() => {
-                    setMoMenu(false);
+                    setIsMenuOpen(false);
                     onOpenEditMonth();
                   }}
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
@@ -177,7 +178,7 @@ export function AuthButton({
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  setMoMenu(false);
+                  setIsMenuOpen(false);
                   onOpenCourts();
                 }}
                 className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
@@ -191,7 +192,7 @@ export function AuthButton({
                   type="button"
                   role="menuitem"
                   onClick={() => {
-                    setMoMenu(false);
+                    setIsMenuOpen(false);
                     onOpenAdmins();
                   }}
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
@@ -207,15 +208,15 @@ export function AuthButton({
             <button
               type="button"
               role="menuitem"
-              disabled={dangChay}
+              disabled={isSigningOut}
               onClick={() =>
                 startTransition(async () => {
                   try {
                     await signOut();
                   } catch (e) {
                     if (isNavigationError(e)) throw e;
-                    // Đăng xuất hỏng thì không có gì để người dùng sửa; ghi log
-                    // rồi thôi, quan trọng là đừng làm sập cả trang.
+                    // If sign-out fails there is nothing the user can fix; just log
+                    // it — what matters is not crashing the whole page.
                     console.error('[đăng xuất] thất bại', e);
                   }
                 })
@@ -223,7 +224,7 @@ export function AuthButton({
               className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:opacity-60"
             >
               <LogOut className="h-4 w-4" />
-              <span>{dangChay ? 'Đang thoát...' : 'Đăng xuất'}</span>
+              <span>{isSigningOut ? 'Đang thoát...' : 'Đăng xuất'}</span>
             </button>
           </div>
         </div>

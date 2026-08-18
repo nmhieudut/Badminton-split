@@ -11,8 +11,8 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
   const defaults = await getSessionDefaults(monthKey);
   const courts = await listActiveCourts();
 
-  const vaiTro = await getRole();
-  const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
+  const role = await getRole();
+  const isAdmin = role === 'admin' || role === 'super_admin';
 
   return (
     <DailySessionsTab

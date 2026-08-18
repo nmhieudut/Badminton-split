@@ -13,8 +13,8 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
     data.members.map(async (m) => ({ ...m, qrUrl: await getQrSignedUrl(m.qrImagePath) }))
   );
 
-  const vaiTro = await getRole();
-  const isAdmin = vaiTro === 'admin' || vaiTro === 'super_admin';
+  const role = await getRole();
+  const isAdmin = role === 'admin' || role === 'super_admin';
 
   return (
     <MemberView

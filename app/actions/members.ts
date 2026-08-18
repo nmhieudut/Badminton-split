@@ -72,9 +72,10 @@ export async function updateMember(monthKey: string, memberId: string, input: Me
 }
 
 /**
- * Chỉ gỡ khỏi tháng đang xem. Bản ghi thành viên và lịch sử ở các tháng khác
- * giữ nguyên — xóa hẳn một người sẽ kéo theo mọi buổi đánh họ từng tham gia,
- * làm sai số tiền của những tháng đã chốt.
+ * Only unlinks the member from the month being viewed. The member record and
+ * their history in other months are left untouched — deleting a person outright
+ * would drag along every session they ever attended, corrupting the amounts of
+ * months that are already settled.
  */
 export async function removeMemberFromMonth(monthKey: string, memberId: string) {
   await requireAdmin();
@@ -87,9 +88,10 @@ export async function removeMemberFromMonth(monthKey: string, memberId: string) 
       .delete(monthMembers)
       .where(and(eq(monthMembers.monthId, month.id), eq(monthMembers.memberId, memberId)));
 
-    // Gỡ luôn điểm danh của người này trong các buổi CỦA KỲ NÀY. Để sót lại thì
-    // buổi đánh vẫn tính họ vào số người chia tiền dù họ không còn trong kỳ.
-    // Các kỳ khác không bị đụng tới.
+    // Also drop this person's attendance rows for the sessions OF THIS PERIOD.
+    // If they were left behind, those sessions would still count them among the
+    // people the cost is split between even though they no longer belong to the
+    // period. Other periods are not touched.
     const sessionIds = (
       await tx
         .select({ id: dailySessions.id })
@@ -113,7 +115,7 @@ export async function removeMemberFromMonth(monthKey: string, memberId: string) 
   revalidatePath(`/${monthKey}`, 'layout');
 }
 
-/** Thêm một người đã có sẵn vào tháng đang xem. */
+/** Add an already existing member to the month being viewed. */
 export async function addExistingMemberToMonth(monthKey: string, memberId: string) {
   await requireAdmin();
 

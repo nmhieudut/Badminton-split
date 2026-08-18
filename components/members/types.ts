@@ -1,11 +1,11 @@
 import type { ViewMemberWithQr, ViewSettlementRow } from '../../lib/view-types';
 
-/** Giá trị người dùng nhập ở form thêm/sửa một thành viên. */
+/** Values entered in the add/edit form for a single member. */
 export interface MemberFormValues {
   name: string;
   phone: string;
   isPermanent: boolean;
-  /** Ảnh QR mới chọn (đã nén). Bỏ trống nghĩa là giữ nguyên ảnh cũ. */
+  /** Newly picked QR image (already compressed). Empty means keep the existing one. */
   qrFile: File | null;
 }
 

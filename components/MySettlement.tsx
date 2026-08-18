@@ -147,7 +147,7 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                     </figcaption>
                     {/* Banking apps let you upload a QR image, so saving it to the device has to work. */}
                     <div className="mt-2">
-                      <QrSaveButton url={qr} tenNguoi={t.toMemberName} />
+                      <QrSaveButton url={qr} personName={t.toMemberName} />
                     </div>
                   </figure>
                 ) : (

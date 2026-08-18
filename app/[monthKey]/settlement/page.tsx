@@ -15,10 +15,11 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
     data.members.map(async (m) => [m.id, await getQrSignedUrl(m.qrImagePath)] as const)
   );
 
-  // Ai đang cầm máy. Đọc ở server để khối "việc của tôi" hiện đúng ngay từ đầu.
-  // Bỏ qua nếu người trong cookie không thuộc kỳ này.
-  const luu = (await cookies()).get(ME_COOKIE)?.value ?? null;
-  const meId = luu && data.members.some((m) => m.id === luu) ? luu : null;
+  // Who is holding the phone. Read on the server so the "my tasks" block is
+  // correct on first paint. Ignored if the person in the cookie does not belong
+  // to this period.
+  const saved = (await cookies()).get(ME_COOKIE)?.value ?? null;
+  const meId = saved && data.members.some((m) => m.id === saved) ? saved : null;
 
 
   const report = generateZaloReport({

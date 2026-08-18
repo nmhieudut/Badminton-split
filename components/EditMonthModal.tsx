@@ -33,12 +33,12 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
     setInitialFundInput(num.toLocaleString('vi-VN'));
   };
 
-  const [loi, setLoi] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const fund = parseVNDInput(initialFundInput);
-    setLoi(null);
+    setError(null);
     startTransition(async () => {
       try {
         await updateMonth(month.id, {
@@ -48,21 +48,21 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
         });
         onClose();
       } catch (err) {
-        // redirect()/notFound() ném lỗi để hoạt động — phải cho chúng đi tiếp.
+        // redirect()/notFound() work by throwing — let those errors through.
         if (isNavigationError(err)) throw err;
-        setLoi(errorMessage(err));
+        setError(errorMessage(err));
       }
     });
   };
 
   const handleDelete = () => {
-    setLoi(null);
+    setError(null);
     startTransition(async () => {
       try {
         await deleteMonth(month.id);
       } catch (err) {
         if (isNavigationError(err)) throw err;
-        setLoi(errorMessage(err, 'Không xóa được kỳ này. Thử lại giúp.'));
+        setError(errorMessage(err, 'Không xóa được kỳ này. Thử lại giúp.'));
       }
     });
   };
@@ -191,9 +191,9 @@ export const EditMonthModal: React.FC<EditMonthModalProps> = ({ month, canDelete
               </div>
             </div>
 
-            {loi && (
+            {error && (
               <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                {loi}
+                {error}
               </p>
             )}
           </form>

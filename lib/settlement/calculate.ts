@@ -7,12 +7,13 @@ import type {
 } from './types';
 
 /**
- * Chênh lệch nhỏ hơn ngưỡng này không đáng sinh một lần chuyển khoản.
+ * A balance smaller than this threshold is not worth generating a transfer for.
  *
- * Mọi nơi hiển thị "còn nợ / được nhận / đã đủ" đều phải dùng chung hằng số
- * này. Trước đây bảng quyết toán dùng 100 còn báo cáo Zalo dùng 500, nên người
- * có số dư 300 đồng hiện là còn nợ trên bảng nhưng "ĐÃ ĐỦ" trong báo cáo gửi
- * lên nhóm, mà lại không có giao dịch nào được sinh ra cho họ.
+ * Every place that shows "still owes / gets back / all square" must share this
+ * one constant. The settlement table used to use 100 while the Zalo report used
+ * 500, so someone with a balance of 300 đồng showed as still owing on the table
+ * but "ĐÃ ĐỦ" in the report sent to the group — while no transfer was ever
+ * generated for them.
  */
 export const ROUNDING_THRESHOLD = 500;
 
@@ -22,12 +23,14 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
   const memberIds = new Set(members.map((m) => m.id));
 
   /**
-   * Bỏ id không thuộc danh sách thành viên của kỳ.
+   * Drop any id that is not on this period's member roster.
    *
-   * Buổi đánh có thể còn lưu id của người đã bị gỡ khỏi kỳ, hoặc id lấy nhầm
-   * từ kỳ khác. Nếu chia tiền cho cả những id đó thì phần của họ không cộng
-   * được vào ai và biến mất khỏi tổng — 200.000 chia cho 11 id trong khi kỳ
-   * chỉ có 5 người thì 109.090 đồng bốc hơi, và tổng số dư ròng khác 0.
+   * A session can still hold the id of someone removed from the period, or an
+   * id picked up by mistake from another period. If money is divided across
+   * those ids too, their shares cannot be credited to anybody and vanish from
+   * the total — splitting 200.000 across 11 ids while the period only has 5
+   * people made 109.090 đồng evaporate, and left the net balances not summing
+   * to zero. So the filtering has to happen BEFORE the division, not after.
    */
   const onlyPeriodMembers = (ids: string[]) => ids.filter((id) => memberIds.has(id));
 
@@ -63,10 +66,10 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     if (s.drinkFee > 0) add(paid, s.drinkPayerId, s.drinkFee);
     if (s.otherFee > 0) add(paid, s.otherFeePayerId, s.otherFee);
 
-    // Buổi không ghi người có mặt — hoặc chỉ ghi toàn id lạ — thì coi như cả
-    // nhóm cùng chịu.
-    const coMat = onlyPeriodMembers(s.attendeeIds);
-    const attendees = coMat.length > 0 ? coMat : members.map((m) => m.id);
+    // A session with no attendance recorded — or with nothing but unknown ids
+    // — is treated as the whole group sharing the cost.
+    const rosterAttendees = onlyPeriodMembers(s.attendeeIds);
+    const attendees = rosterAttendees.length > 0 ? rosterAttendees : members.map((m) => m.id);
     if (attendees.length === 0) continue;
 
     const court = allocate(s.courtFee, attendees);
@@ -110,8 +113,9 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
 }
 
 /**
- * Khớp tham lam người nợ nhiều nhất với người được nhận nhiều nhất để số lần
- * chuyển khoản là ít nhất. Sắp xếp có phá hòa bằng id nên kết quả ổn định.
+ * Greedily matches the largest debtor with the largest creditor so the number
+ * of transfers stays minimal. Sorting breaks ties by id, so the result is
+ * stable across runs.
  */
 function buildTransfers(rows: SettlementRow[]): Transfer[] {
   const nameOf = new Map(rows.map((r) => [r.memberId, r.name]));

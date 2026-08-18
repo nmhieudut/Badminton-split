@@ -49,7 +49,7 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
 
   const existing = new Set(existingMonthKeys);
 
-  const [loi, setLoi] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const goToMonth = (monthKey: string) => {
     if (isPending) return;
@@ -58,17 +58,17 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
       onClose();
       return;
     }
-    // Kỳ chưa tồn tại: tạo mới rồi server action tự chuyển trang.
+    // The period does not exist yet: create it and let the server action navigate.
     setPendingKey(monthKey);
-    setLoi(null);
+    setError(null);
     startTransition(async () => {
       try {
         await createMonth(monthKey);
       } catch (e) {
-        // createMonth kết thúc bằng redirect(), mà redirect() hoạt động bằng
-        // cách ném lỗi — nuốt nó ở đây là chặn luôn việc chuyển trang.
+        // createMonth ends with redirect(), and redirect() works by throwing —
+        // swallowing that error here would block the navigation entirely.
         if (isNavigationError(e)) throw e;
-        setLoi(errorMessage(e, 'Không tạo được kỳ này. Thử lại giúp.'));
+        setError(errorMessage(e, 'Không tạo được kỳ này. Thử lại giúp.'));
         setPendingKey(null);
       }
     });
@@ -246,9 +246,9 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
             </button>
           </div>
 
-          {loi && (
+          {error && (
             <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-              {loi}
+              {error}
             </p>
           )}
         </div>

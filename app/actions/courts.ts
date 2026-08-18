@@ -27,10 +27,11 @@ export async function createCourt(input: CourtInput) {
 }
 
 /**
- * Sửa tên hoặc giá của một sân.
+ * Edit a court's name or fee.
  *
- * An toàn với dữ liệu cũ: buổi đánh chép lại tên và giá lúc ghi, không trỏ tới
- * bảng này, nên đổi giá ở đây không làm sai số tiền của những kỳ đã chốt.
+ * Safe for existing data: a session snapshots the court name and fee when it is
+ * saved instead of pointing at this table, so changing the fee here does not
+ * alter the amounts of periods that are already settled.
  */
 export async function updateCourt(courtId: string, input: CourtInput) {
   await requireAdmin();
@@ -48,10 +49,11 @@ export async function updateCourt(courtId: string, input: CourtInput) {
 }
 
 /**
- * Bật hoặc tắt một sân.
+ * Enable or disable a court.
  *
- * Tắt chứ không xóa: sân đã tắt biến khỏi dropdown nhưng những buổi từng đánh
- * ở đó vẫn nguyên vẹn, và bật lại được bất cứ lúc nào.
+ * Disable rather than delete: a disabled court disappears from the dropdown but
+ * the sessions ever played there stay intact, and it can be re-enabled at any
+ * time.
  */
 export async function toggleCourtActive(courtId: string, isActive: boolean) {
   await requireAdmin();

@@ -11,13 +11,14 @@ const globalForDb = globalThis as unknown as {
 };
 
 /**
- * Mở kết nối ở lần dùng đầu tiên, không phải lúc nạp module.
+ * Opens the connection on first use, not at module load time.
  *
- * Next.js import module của mọi trang ở bước "Collecting page data" khi build.
- * Nếu tệp này ném lỗi ngay lúc nạp thì cả bản build hỏng chỉ vì thiếu biến môi
- * trường — mà một bản build lẽ ra không cần biết mật khẩu database. Hoãn lại
- * đến lần truy vấn đầu tiên thì build chạy được ở nơi không có secret, còn
- * thiếu thật thì lỗi hiện lúc có người gọi, kèm thông báo rõ ràng.
+ * Next.js imports every page module during the "Collecting page data" build
+ * step. If this file threw as soon as it was loaded, the whole build would fail
+ * over a missing environment variable — and a build has no business knowing the
+ * database password. Deferring to the first query lets the build run somewhere
+ * without secrets, while a genuinely missing variable surfaces when someone
+ * actually makes a call, with a clear message.
  */
 function getDb(): Db {
   if (globalForDb.db) return globalForDb.db;
@@ -27,9 +28,10 @@ function getDb(): Db {
     throw new ConfigError('Thiếu biến môi trường DATABASE_URL');
   }
 
-  // Trên Vercel nhiều lần gọi có thể dùng lại cùng một container, nên giữ client
-  // ở phạm vi module. `prepare: false` là bắt buộc với transaction pooler của
-  // Supabase — pooler không giữ prepared statement giữa các giao dịch.
+  // On Vercel several invocations can reuse the same container, so the client
+  // is kept at module scope. `prepare: false` is mandatory with Supabase's
+  // transaction pooler — the pooler does not keep prepared statements across
+  // transactions.
   const client =
     globalForDb.client ?? postgres(connectionString, { prepare: false, ssl: 'require' });
 
@@ -44,8 +46,8 @@ function getDb(): Db {
 }
 
 /**
- * Dùng như một thực thể Drizzle bình thường; mọi truy cập đều đi qua getDb()
- * nên nơi gọi không cần biết chuyện khởi tạo trễ.
+ * Used like an ordinary Drizzle instance; every access goes through getDb(), so
+ * callers never have to know about the lazy initialization.
  */
 export const db = new Proxy({} as Db, {
   get(_target, prop) {

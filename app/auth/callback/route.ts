@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerSupabaseClient } from '../../../lib/supabase/server';
 
 /**
- * Google trả người dùng về Supabase, Supabase đẩy tiếp về đây kèm mã `code`.
- * Đổi mã lấy phiên rồi đưa họ về đúng trang đang xem trước khi đăng nhập.
+ * Google returns the user to Supabase, and Supabase forwards them here with a
+ * `code`. Exchange the code for a session, then send them back to the page they
+ * were viewing before signing in.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -14,9 +15,10 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerSupabaseClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // Chỉ nhận đường dẫn nội bộ, chặn chuyển hướng ra ngoài.
-      const dich = next.startsWith('/') && !next.startsWith('//') ? next : '/';
-      return NextResponse.redirect(`${origin}${dich}`);
+      // Only internal paths are accepted, which blocks open redirects to an
+      // external site.
+      const destination = next.startsWith('/') && !next.startsWith('//') ? next : '/';
+      return NextResponse.redirect(`${origin}${destination}`);
     }
     console.error('[đăng nhập] đổi mã lấy phiên thất bại:', error.message);
   }

@@ -6,8 +6,9 @@ import { compressImageFile } from '../../lib/image';
 import type { MemberFormValues, ViewMemberWithQr } from './types';
 
 /**
- * Nén ảnh phía trình duyệt rồi bọc lại thành File để Server Action đẩy thẳng lên
- * Storage — ảnh chụp màn hình QR thường 2-4MB, gửi nguyên bản rất chậm.
+ * Compresses the image in the browser and rewraps it as a File so the Server
+ * Action can push it straight to Storage — QR screenshots are usually 2-4MB, and
+ * sending the original is very slow.
  */
 async function toCompressedFile(file: File): Promise<File> {
   const dataUrl = await compressImageFile(file, 600, 0.85);
@@ -16,12 +17,12 @@ async function toCompressedFile(file: File): Promise<File> {
 }
 
 interface MemberFormPanelProps {
-  /** Có giá trị nghĩa là đang sửa; null là thêm mới. */
+  /** A value means we are editing; null means adding a new member. */
   editingMember: ViewMemberWithQr | null;
   isPending: boolean;
   errorMessage: string | null;
   onCancel: () => void;
-  /** keepOpen = true: lưu xong giữ form để nhập tiếp người kế. */
+  /** keepOpen = true: keep the form open after saving to enter the next person. */
   onSubmit: (values: MemberFormValues, keepOpen: boolean) => void;
 }
 
@@ -42,7 +43,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
   const keepOpenRef = useRef(false);
   const qrFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Ảnh mới chọn hiển thị bằng object URL, phải thu hồi để không rò bộ nhớ.
+  // A newly picked image is shown via an object URL, which must be revoked to avoid a memory leak.
   useEffect(() => {
     if (!qrFile) {
       setQrPreview(null);
@@ -126,7 +127,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
           </div>
         </div>
 
-        {/* Ảnh QR — cách duy nhất để nhận tiền */}
+        {/* QR image — the only way to receive money */}
         <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-950">
@@ -212,7 +213,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
           )}
         </div>
 
-        {/* Thành viên cố định */}
+        {/* Permanent member */}
         <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3">
           <div>
             <span className="font-bold text-xs text-slate-800 block">

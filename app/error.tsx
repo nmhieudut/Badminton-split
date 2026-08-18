@@ -4,12 +4,12 @@ import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 
 /**
- * Lưới an toàn cuối cùng.
+ * The last safety net.
  *
- * Mọi thao tác đều đã bắt lỗi tại chỗ và hiện thông báo ngay trong biểu mẫu.
- * Nhưng nếu có một lỗi nào lọt qua hết, người dùng vẫn phải thấy một trang đọc
- * được và bấm được, chứ không phải màn hình trắng — nhất là khi họ đang ở sân
- * và chỉ muốn ghi nốt buổi đánh.
+ * Every operation already catches its own errors and shows the message right
+ * inside the form. But if an error ever slips past all of them, the user must
+ * still get a page they can read and click, not a blank screen — especially
+ * when they are at the court and only want to finish recording the session.
  */
 export default function Error({
   error,
@@ -19,7 +19,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Chi tiết vào log của server, người dùng chỉ thấy câu chung.
+    // Details go to the server log; the user only sees the generic sentence.
     console.error('[trang lỗi]', error.message, error.digest ?? '');
   }, [error]);
 

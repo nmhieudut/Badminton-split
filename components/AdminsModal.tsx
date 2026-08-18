@@ -5,21 +5,21 @@ import { createPortal } from 'react-dom';
 import { ShieldCheck, X } from 'lucide-react';
 import { addAdmin, removeAdmin } from '../app/actions/admins';
 
-export type RowRole = 'super_admin' | 'admin' | 'chi_xem';
+export type RowRole = 'super_admin' | 'admin' | 'viewer';
 
 export interface UserRow {
   email: string;
-  ten: string | null;
-  anhDaiDien: string | null;
-  vaiTro: RowRole;
-  /** Ngày đăng nhập gần nhất; null nghĩa là chưa từng đăng nhập. */
-  lanCuoi: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+  role: RowRole;
+  /** Most recent sign-in; null means they have never signed in. */
+  lastSignInAt: string | null;
 }
 
-const NHAN: Record<RowRole, { chu: string; lop: string }> = {
-  super_admin: { chu: 'Chủ nhóm', lop: 'bg-emerald-50 text-emerald-700' },
-  admin: { chu: 'Quản lý', lop: 'bg-indigo-50 text-indigo-700' },
-  chi_xem: { chu: 'Chỉ xem', lop: 'bg-slate-100 text-slate-500' },
+const ROLE_BADGE: Record<RowRole, { label: string; className: string }> = {
+  super_admin: { label: 'Chủ nhóm', className: 'bg-emerald-50 text-emerald-700' },
+  admin: { label: 'Quản lý', className: 'bg-indigo-50 text-indigo-700' },
+  viewer: { label: 'Chỉ xem', className: 'bg-slate-100 text-slate-500' },
 };
 
 export function AdminsModal({
@@ -29,12 +29,12 @@ export function AdminsModal({
   rows: UserRow[];
   onClose: () => void;
 }) {
-  const [loi, setLoi] = useState<string | null>(null);
-  const [dangXuLy, setDangXuLy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const [daGanVaoDom, setDaGanVaoDom] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => setDaGanVaoDom(true), []);
+  useEffect(() => setIsMounted(true), []);
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
@@ -44,23 +44,23 @@ export function AdminsModal({
     return () => document.removeEventListener('keydown', esc);
   }, [onClose]);
 
-  if (!daGanVaoDom) return null;
+  if (!isMounted) return null;
 
-  const doiQuyen = (email: string, capQuyen: boolean) => {
-    setLoi(null);
-    setDangXuLy(email);
+  const changeRole = (email: string, grant: boolean) => {
+    setError(null);
+    setPendingEmail(email);
     startTransition(async () => {
       try {
-        await (capQuyen ? addAdmin(email) : removeAdmin(email));
+        await (grant ? addAdmin(email) : removeAdmin(email));
       } catch (e) {
-        setLoi(e instanceof Error ? e.message : 'Không đổi được quyền.');
+        setError(e instanceof Error ? e.message : 'Không đổi được quyền.');
       } finally {
-        setDangXuLy(null);
+        setPendingEmail(null);
       }
     });
   };
 
-  const noiDung = (
+  const content = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={onClose}
@@ -99,9 +99,9 @@ export function AdminsModal({
           )}
 
           {rows.map((n) => {
-            const laSuper = n.vaiTro === 'super_admin';
-            const laAdmin = n.vaiTro === 'admin';
-            const nhan = NHAN[n.vaiTro];
+            const isSuperAdminRow = n.role === 'super_admin';
+            const isAdminRow = n.role === 'admin';
+            const badge = ROLE_BADGE[n.role];
 
             return (
               <li
@@ -109,39 +109,39 @@ export function AdminsModal({
                 className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5"
               >
                 <span className="flex min-w-0 items-center gap-2.5">
-                  {n.anhDaiDien ? (
+                  {n.avatarUrl ? (
                     <img
-                      src={n.anhDaiDien}
+                      src={n.avatarUrl}
                       alt=""
                       className="h-9 w-9 shrink-0 rounded-xl object-cover"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-sm font-bold text-slate-600">
-                      {(n.ten ?? n.email).charAt(0).toUpperCase()}
+                      {(n.name ?? n.email).charAt(0).toUpperCase()}
                     </span>
                   )}
 
                   <span className="min-w-0">
-                    {n.ten && (
+                    {n.name && (
                       <span className="block truncate text-sm font-bold text-slate-900">
-                        {n.ten}
+                        {n.name}
                       </span>
                     )}
                     <span className="block truncate text-[11px] text-slate-500">
                       {n.email}
                     </span>
                     <span
-                      className={`mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${nhan.lop}`}
+                      className={`mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}
                     >
-                      {laSuper && <ShieldCheck className="h-2.5 w-2.5" />}
-                      {nhan.chu}
-                      {!n.lanCuoi && ' · chưa đăng nhập'}
+                      {isSuperAdminRow && <ShieldCheck className="h-2.5 w-2.5" />}
+                      {badge.label}
+                      {!n.lastSignInAt && ' · chưa đăng nhập'}
                     </span>
                   </span>
                 </span>
 
-                {laSuper ? (
+                {isSuperAdminRow ? (
                   <span
                     className="shrink-0 text-[11px] text-slate-400"
                     title="Đặt trong biến môi trường ADMIN_EMAILS, chỉ đổi được khi triển khai lại"
@@ -151,15 +151,15 @@ export function AdminsModal({
                 ) : (
                   <button
                     type="button"
-                    disabled={dangXuLy === n.email}
-                    onClick={() => doiQuyen(n.email, !laAdmin)}
+                    disabled={pendingEmail === n.email}
+                    onClick={() => changeRole(n.email, !isAdminRow)}
                     className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors disabled:opacity-60 ${
-                      laAdmin
+                      isAdminRow
                         ? 'border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700'
                     }`}
                   >
-                    {dangXuLy === n.email ? '...' : laAdmin ? 'Gỡ quyền' : 'Cấp quyền'}
+                    {pendingEmail === n.email ? '...' : isAdminRow ? 'Gỡ quyền' : 'Cấp quyền'}
                   </button>
                 )}
               </li>
@@ -167,14 +167,14 @@ export function AdminsModal({
           })}
         </ul>
 
-        {loi && (
+        {error && (
           <p className="border-t border-slate-100 px-5 py-3 text-xs font-semibold text-rose-600">
-            {loi}
+            {error}
           </p>
         )}
       </div>
     </div>
   );
 
-  return createPortal(noiDung, document.body);
+  return createPortal(content, document.body);
 }

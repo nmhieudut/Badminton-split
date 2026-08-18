@@ -7,11 +7,11 @@ import { signInWithGoogle } from '../app/actions/auth';
 import { isNavigationError, errorMessage } from '../lib/navigation-error';
 
 export function LoginModal({ next, onClose }: { next: string; onClose: () => void }) {
-  const [dangChay, startTransition] = useTransition();
-  const [daGanVaoDom, setDaGanVaoDom] = useState(false);
-  const [loi, setLoi] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [isMounted, setIsMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setDaGanVaoDom(true), []);
+  useEffect(() => setIsMounted(true), []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -21,9 +21,9 @@ export function LoginModal({ next, onClose }: { next: string; onClose: () => voi
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  if (!daGanVaoDom) return null;
+  if (!isMounted) return null;
 
-  const noiDung = (
+  const content = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={onClose}
@@ -56,36 +56,38 @@ export function LoginModal({ next, onClose }: { next: string; onClose: () => voi
 
         <button
           type="button"
-          disabled={dangChay}
+          disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              setLoi(null);
+              setError(null);
               try {
                 await signInWithGoogle(next);
               } catch (e) {
-                // signInWithGoogle kết thúc bằng redirect() sang Google.
+                // signInWithGoogle ends with a redirect() over to Google, and
+                // redirect() works by throwing — rethrow so the navigation happens.
                 if (isNavigationError(e)) throw e;
-                setLoi(errorMessage(e, 'Không mở được trang đăng nhập.'));
+                setError(errorMessage(e, 'Không mở được trang đăng nhập.'));
               }
             })
           }
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
-          {dangChay ? 'Đang chuyển tới Google...' : 'Tiếp tục với Google'}
+          {isPending ? 'Đang chuyển tới Google...' : 'Tiếp tục với Google'}
         </button>
 
-        {loi && <p className="mt-2 text-xs font-semibold text-rose-600">{loi}</p>}
+        {error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}
       </div>
     </div>
   );
 
   /*
-    Đưa thẳng ra document.body.
+    Portal straight into document.body.
 
-    Modal này được mở từ nút nằm trong <header>, mà header có backdrop-blur.
-    `backdrop-filter` tạo containing block mới cho con cháu position:fixed, nên
-    `inset-0` sẽ tính theo header cao vài chục pixel thay vì theo cửa sổ — modal
-    bị căn giữa trong header rồi tràn lên trên và mất phần tiêu đề.
+    This modal is opened from a button inside <header>, and the header has
+    backdrop-blur. `backdrop-filter` creates a new containing block for
+    position:fixed descendants, so `inset-0` would resolve against a header a few
+    dozen pixels tall instead of against the viewport — the modal ends up centered
+    inside the header, overflowing upward and losing its title.
   */
-  return createPortal(noiDung, document.body);
+  return createPortal(content, document.body);
 }

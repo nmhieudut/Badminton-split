@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Sparkles, TriangleAlert } from 'lucide-react';
 
 interface BulkAddPanelProps {
-  /** Tên đã có trong kỳ này, để không thêm trùng. */
+  /** Names already in this period, so duplicates are not added again. */
   existingNames: string[];
   isPending: boolean;
   errorMessage: string | null;
@@ -12,7 +12,7 @@ interface BulkAddPanelProps {
   onSubmit: (names: string[]) => void;
 }
 
-/** Tách danh sách dán từ Zalo: bỏ số thứ tự, gạch đầu dòng và tên trùng nhau. */
+/** Parses a list pasted from Zalo: strips numbering and bullets, drops duplicate names. */
 export function parsePastedNames(raw: string, existingNames: string[] = []): string[] {
   const seen = new Set(existingNames.map((n) => n.toLowerCase()));
   const out: string[] = [];

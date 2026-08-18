@@ -2,9 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import { ConfigError } from '../errors';
 
 /**
- * Client dùng service role key — TOÀN QUYỀN, chỉ được gọi từ server.
+ * Client built on the service role key — FULL ACCESS, server-side only.
  *
- * Không bao giờ đưa client này, hay khóa của nó, xuống trình duyệt.
+ * Never ship this client, or its key, to the browser.
  */
 export function createAdminSupabaseClient() {
   const url = process.env.SUPABASE_URL;

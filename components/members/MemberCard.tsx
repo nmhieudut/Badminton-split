@@ -15,7 +15,7 @@ interface MemberCardProps {
   onEdit: () => void;
   onRemove: () => void;
   onPreviewQr: () => void;
-  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
 }
 
@@ -74,7 +74,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
           </span>
         </div>
 
-        {/* Số liệu kỳ này — lấy nguyên từ bảng quyết toán của server */}
+        {/* This period's figures — taken as-is from the server settlement table */}
         {row && (
           <div className="mt-3 grid grid-cols-3 gap-1.5 rounded-xl bg-slate-50 p-2.5 border border-slate-100 text-center">
             <div>
@@ -113,7 +113,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
           </div>
         )}
 
-        {/* Trạng thái QR — cách duy nhất để nhận tiền trong app */}
+        {/* QR status — the only way to receive money in the app */}
         <div className="mt-2.5 rounded-xl bg-slate-50 p-2.5 border border-slate-100">
           {member.qrUrl ? (
             <div className="flex items-center justify-between gap-2">
@@ -159,7 +159,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
         </div>
       </div>
 
-      {/* Hành động */}
+      {/* Actions */}
       {isAdmin && (
         <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
           <button

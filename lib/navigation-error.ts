@@ -1,9 +1,9 @@
 /**
- * `redirect()` và `notFound()` của Next.js hoạt động bằng cách NÉM LỖI.
+ * Next.js `redirect()` and `notFound()` work by THROWING.
  *
- * Nghĩa là một khối `catch` bình thường sẽ nuốt luôn chúng: người dùng bấm nút,
- * không được chuyển trang, và thấy một thông báo lỗi vô nghĩa. Mọi chỗ bắt lỗi
- * quanh Server Action đều phải ném lại hai loại này.
+ * That means an ordinary `catch` block swallows them: the user presses a
+ * button, is never navigated anywhere, and sees a meaningless error message.
+ * Every catch around a Server Action must re-throw these two kinds of error.
  */
 export function isNavigationError(e: unknown): boolean {
   const digest = (e as { digest?: unknown } | null)?.digest;
@@ -13,7 +13,7 @@ export function isNavigationError(e: unknown): boolean {
   );
 }
 
-/** Thông báo hiện cho người dùng khi một thao tác thất bại. */
-export function errorMessage(e: unknown, macDinh = 'Không lưu được. Thử lại giúp.'): string {
-  return e instanceof Error && e.message ? e.message : macDinh;
+/** Message shown to the user when an operation fails. */
+export function errorMessage(e: unknown, fallback = 'Không lưu được. Thử lại giúp.'): string {
+  return e instanceof Error && e.message ? e.message : fallback;
 }

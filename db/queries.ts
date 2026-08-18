@@ -112,9 +112,10 @@ export async function getMonthData(monthKey: string) {
 }
 
 /**
- * Thông số của buổi đánh gần nhất, dùng làm giá trị mặc định khi ghi buổi mới.
- * Thay cho các hằng số cứng ('Sân 3 - Kỳ Hòa', 180000, 4 quả) trong bản cũ.
- * Nếu tháng đang xem chưa có buổi nào thì lấy buổi cuối của tháng trước đó.
+ * The settings of the most recent session, used as defaults when recording a
+ * new one. Replaces the hard-coded constants ('Sân 3 - Kỳ Hòa', 180000, 4
+ * shuttles) of the old version. If the month being viewed has no session yet,
+ * the last session of the previous month is used.
  */
 export async function getSessionDefaults(monthKey: string) {
   const month = await getMonthByKey(monthKey);
@@ -130,9 +131,11 @@ export async function getSessionDefaults(monthKey: string) {
   const source = latest ?? (await latestSessionBefore(monthKey));
   if (!source) return null;
 
-  // Chỉ giữ những người CÓ TRONG kỳ đang xem. Buổi nguồn có thể thuộc kỳ trước
-  // với danh sách thành viên khác hẳn; lấy nguyên si sẽ điền sẵn id của người
-  // không thuộc kỳ này, và tiền chia cho họ sẽ biến mất khỏi tổng.
+  // Keep only people who ARE on the roster of the period being viewed. The
+  // source session may belong to the previous period with a completely
+  // different member list; copying it verbatim would pre-fill ids of people not
+  // in this period, and the money divided among them would vanish from the
+  // total.
   const attendees = await db
     .select({ memberId: sessionAttendees.memberId })
     .from(sessionAttendees)
@@ -181,7 +184,7 @@ function groupBy<T, K, V>(rows: T[], key: (r: T) => K, value: (r: T) => V): Map<
   return map;
 }
 
-/** Danh sách admin do super admin thêm. Super admin không nằm trong bảng này. */
+/** Admins added by a super admin. Super admins are not in this table. */
 export async function listAdmins() {
   return db
     .select({
@@ -193,7 +196,7 @@ export async function listAdmins() {
     .orderBy(asc(admins.email));
 }
 
-/** Toàn bộ sân, kể cả sân đã tắt — dùng cho màn hình quản lý. */
+/** Every court, including disabled ones — used by the management screen. */
 export async function listCourts() {
   return db
     .select({
@@ -206,7 +209,7 @@ export async function listCourts() {
     .orderBy(asc(courts.name));
 }
 
-/** Chỉ sân đang dùng — đổ vào dropdown khi ghi buổi đánh. */
+/** Only courts currently in use — feeds the dropdown when recording a session. */
 export async function listActiveCourts() {
   return db
     .select({

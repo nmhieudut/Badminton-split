@@ -1,22 +1,24 @@
 /**
- * Câu duy nhất người dùng thấy khi hệ thống thiếu cấu hình hoặc không kết nối
- * được hạ tầng. Không nêu tên biến môi trường, tên dịch vụ hay cách khắc phục —
- * người dùng không sửa được những thứ đó, và phơi ra chỉ giúp người dò tìm.
+ * The single sentence the user sees when the system is missing configuration
+ * or cannot reach its infrastructure. It never names an environment variable,
+ * a service, or a fix — the user cannot act on any of that, and exposing it
+ * only helps someone probing the app.
  */
-const THONG_BAO_CHUNG = 'Hệ thống đang trục trặc. Vui lòng thử lại sau ít phút.';
+const GENERIC_MESSAGE = 'Hệ thống đang trục trặc. Vui lòng thử lại sau ít phút.';
 
 /**
- * Lỗi cấu hình phía máy chủ.
+ * A server-side configuration error.
  *
- * Chi tiết đi vào log của server để người vận hành đọc; người dùng chỉ nhận câu
- * chung ở trên. Dùng cho biến môi trường thiếu, dịch vụ ngoài không gọi được —
- * KHÔNG dùng cho lỗi nhập liệu, vì loại đó người dùng sửa được và cần biết rõ
- * mình sai chỗ nào.
+ * The details go to the server log for whoever operates the app; the user only
+ * ever gets the generic sentence above. Use this for missing environment
+ * variables or unreachable external services — NOT for input validation, since
+ * the user can fix that kind of problem and needs to know exactly what is
+ * wrong.
  */
 export class ConfigError extends Error {
-  constructor(chiTiet: string) {
-    super(THONG_BAO_CHUNG);
+  constructor(detail: string) {
+    super(GENERIC_MESSAGE);
     this.name = 'ConfigError';
-    console.error(`[cấu hình] ${chiTiet}`);
+    console.error(`[cấu hình] ${detail}`);
   }
 }

@@ -6,22 +6,25 @@ import { db } from '../../db';
 import { months, settledTransfers } from '../../db/schema';
 
 /**
- * Đánh dấu hoặc bỏ đánh dấu một giao dịch đã chuyển khoản.
+ * Mark a transfer as paid, or unmark it.
  *
- * NGOẠI LỆ CÓ CHỦ ĐÍCH: action này KHÔNG gọi requireAdmin().
+ * DELIBERATE EXEMPTION: this action does NOT call requireAdmin().
  *
- * Người vừa chuyển tiền xong muốn tích luôn, và bắt họ đăng nhập bằng Google
- * chỉ để bấm một nút là rào cản lớn hơn giá trị nó bảo vệ. Đánh đổi: ai có link
- * cũng đánh dấu được, kể cả người chưa trả, và không lưu vết ai bấm. Chấp nhận
- * được vì dấu này chỉ để cả nhóm theo dõi lẫn nhau, không phải chứng từ, và
- * bấm nhầm thì bấm lại là xong.
+ * Whoever has just sent the money wants to tick it off right away, and forcing
+ * them to sign in with Google merely to press one button is a bigger obstacle
+ * than what it would protect. The trade-off: anyone with the link can mark a
+ * transfer, including someone who has not paid, and we keep no record of who
+ * pressed it. That is acceptable because this mark only helps the group keep
+ * track of each other — it is not a receipt — and a mistaken tap is undone by
+ * tapping again.
  *
- * Ngoại lệ này được khai báo trong actions-guard.test.ts. Đừng bỏ chốt chặn ở
- * bất kỳ action nào khác mà không khai báo ở đó — test sẽ đỏ, và nó nên đỏ.
+ * This exemption is declared in actions-guard.test.ts. Do not drop the guard on
+ * any other action without declaring it there — the test will go red, and it
+ * should.
  *
- * Khóa theo cặp người, không kèm số tiền. Bản cũ dùng khóa
- * "{người nợ}-{người nhận}-{số tiền}" nên chỉ cần thêm một buổi đánh là số tiền
- * đổi, khóa đổi theo, và dấu đã chuyển khoản âm thầm biến mất.
+ * The key is the pair of people, without the amount. An earlier version keyed on
+ * "{debtor}-{payee}-{amount}", so adding a single session changed the amount,
+ * which changed the key, and the paid mark silently vanished.
  */
 export async function toggleTransferSettled(
   monthKey: string,
@@ -31,16 +34,16 @@ export async function toggleTransferSettled(
   const [month] = await db.select().from(months).where(eq(months.monthKey, monthKey)).limit(1);
   if (!month) throw new Error('Không tìm thấy tháng');
 
-  const dieuKien = and(
+  const where = and(
     eq(settledTransfers.monthId, month.id),
     eq(settledTransfers.fromMemberId, fromMemberId),
     eq(settledTransfers.toMemberId, toMemberId)
   );
 
-  const [existing] = await db.select().from(settledTransfers).where(dieuKien).limit(1);
+  const [existing] = await db.select().from(settledTransfers).where(where).limit(1);
 
   if (existing) {
-    await db.delete(settledTransfers).where(dieuKien);
+    await db.delete(settledTransfers).where(where);
   } else {
     await db.insert(settledTransfers).values({
       monthId: month.id,

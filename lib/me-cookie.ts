@@ -1,13 +1,13 @@
 /**
- * Tên cookie ghi nhớ ai đang cầm máy.
+ * Name of the cookie that remembers who is holding the phone.
  *
- * Đặt ở module trung lập, KHÔNG phải trong tệp có `'use client'`. Next.js biến
- * mọi export của một module client thành tham chiếu client, nên nếu Server
- * Component import hằng số từ đó thì nhận về một proxy chứ không phải chuỗi —
- * `cookies().get(...)` sẽ luôn trả rỗng, và TypeScript không báo lỗi vì kiểu
- * khai báo vẫn là string.
+ * It lives in a neutral module, NOT in a file marked `'use client'`. Next.js
+ * turns every export of a client module into a client reference, so a Server
+ * Component importing the constant from there would receive a proxy instead of
+ * a string — `cookies().get(...)` would always come back empty, and TypeScript
+ * would not complain because the declared type is still string.
  */
 export const ME_COOKIE = 'bs_me';
 
-/** Ghi nhớ một năm; đây là tuỳ chọn thiết bị, không phải phiên đăng nhập. */
+/** Remember for a year; this is a device preference, not a login session. */
 export const ME_COOKIE_DAYS = 365;

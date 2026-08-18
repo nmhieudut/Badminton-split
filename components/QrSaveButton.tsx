@@ -29,11 +29,11 @@ function stripDiacritics(s: string): string {
  */
 export function QrSaveButton({
   url,
-  tenNguoi: personName,
+  personName: personName,
   className,
 }: {
   url: string;
-  tenNguoi: string;
+  personName: string;
   className?: string;
 }) {
   const [isSaving, setIsSaving] = useState(false);

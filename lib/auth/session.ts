@@ -8,17 +8,18 @@ export type Role = 'super_admin' | 'admin' | null;
 
 export interface SessionUser {
   email: string | null;
-  /** Tên hiển thị từ Google; có thể trống nếu tài khoản không đặt tên. */
-  ten: string | null;
-  /** Ảnh đại diện Google, dùng thẳng trong thẻ img. */
-  anhDaiDien: string | null;
+  /** Display name from Google; may be empty if the account has no name set. */
+  name: string | null;
+  /** Google avatar, used directly in an img tag. */
+  avatarUrl: string | null;
 }
 
 /**
- * Người đang đăng nhập, hoặc null nếu là khách.
+ * The signed-in user, or null for a guest.
  *
- * Dùng getUser() chứ không phải getSession(): getUser() hỏi lại máy chủ auth
- * để xác thực token, còn getSession() chỉ đọc cookie nên có thể bị giả mạo.
+ * This uses getUser() and not getSession(): getUser() asks the auth server to
+ * verify the token, whereas getSession() only reads the cookie, which can be
+ * forged.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   const supabase = await createServerSupabaseClient();
@@ -28,22 +29,24 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   if (!user) return null;
 
-  // Google đặt tên và ảnh ở user_metadata, khóa khác nhau tùy provider.
+  // Google puts the name and picture in user_metadata, under keys that differ
+  // between providers.
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-  const chuoi = (k: string) => (typeof meta[k] === 'string' ? (meta[k] as string) : null);
+  const readString = (k: string) =>
+    typeof meta[k] === 'string' ? (meta[k] as string) : null;
 
   return {
     email: user.email ?? null,
-    ten: chuoi('full_name') ?? chuoi('name'),
-    anhDaiDien: chuoi('avatar_url') ?? chuoi('picture'),
+    name: readString('full_name') ?? readString('name'),
+    avatarUrl: readString('avatar_url') ?? readString('picture'),
   };
 }
 
 /**
- * Vai trò của người đang đăng nhập.
+ * The role of the signed-in user.
  *
- * Biến môi trường luôn thắng: một email vừa có trong ADMIN_EMAILS vừa có trong
- * bảng admins thì tính là super admin.
+ * The environment variable always wins: an email listed in both ADMIN_EMAILS
+ * and the admins table counts as a super admin.
  */
 export async function getRole(): Promise<Role> {
   const user = await getSessionUser();
@@ -52,44 +55,45 @@ export async function getRole(): Promise<Role> {
 
   if (isSuperAdminEmail(email)) return 'super_admin';
 
-  const [dong] = await db
+  const [row] = await db
     .select({ email: admins.email })
     .from(admins)
     .where(eq(admins.email, email))
     .limit(1);
 
-  return dong ? 'admin' : null;
+  return row ? 'admin' : null;
 }
 
-/** Thông báo chung, không nêu chi tiết cơ chế kiểm quyền. */
-const KHONG_DU_QUYEN = 'Bạn không có quyền thực hiện thao tác này.';
+/** Generic message; it reveals nothing about how the permission check works. */
+const FORBIDDEN_MESSAGE = 'Bạn không có quyền thực hiện thao tác này.';
 
 /**
- * Chốt chặn của mọi Server Action ghi dữ liệu nghiệp vụ.
+ * The gate in front of every Server Action that writes business data.
  *
- * Đây là nơi quyền được thực thi thật sự. RLS không giúp gì: app kết nối bằng
- * vai trò `postgres`, vốn có rolbypassrls và sở hữu mọi bảng, nên policy không
- * bao giờ áp lên truy vấn của chính mình.
+ * This is where authorization is actually enforced. RLS is no help: the app
+ * connects as the `postgres` role, which has rolbypassrls and owns every table,
+ * so its policies never apply to the app's own queries.
  */
 export async function requireAdmin(): Promise<void> {
-  const vaiTro = await getRole();
-  if (vaiTro === 'admin' || vaiTro === 'super_admin') return;
+  const role = await getRole();
+  if (role === 'admin' || role === 'super_admin') return;
 
   console.warn('[phân quyền] từ chối thao tác ghi: không đủ quyền');
-  throw new Error(KHONG_DU_QUYEN);
+  throw new Error(FORBIDDEN_MESSAGE);
 }
 
 /**
- * Chốt chặn riêng cho việc quản lý danh sách admin.
+ * The separate gate in front of managing the admin list.
  *
- * Phải là hàm tách biệt, không phải một tham số của requireAdmin(): tách ra thì
- * dùng nhầm là lỗi nhìn thấy được, còn gộp lại thì quên truyền cờ sẽ âm thầm hạ
- * quyền xuống mức thấp hơn. Admin tự thêm được admin khác là ranh giới giữa hai
- * nhóm biến mất mà không có gì báo.
+ * It has to be its own function rather than a parameter of requireAdmin():
+ * kept separate, using the wrong one is a visible mistake, whereas merged, a
+ * forgotten flag silently downgrades the check to the weaker level. If an admin
+ * could add other admins, the boundary between the two groups would disappear
+ * with nothing to signal it.
  */
 export async function requireSuperAdmin(): Promise<void> {
   if ((await getRole()) === 'super_admin') return;
 
   console.warn('[phân quyền] từ chối thao tác quản lý admin: không phải super admin');
-  throw new Error(KHONG_DU_QUYEN);
+  throw new Error(FORBIDDEN_MESSAGE);
 }

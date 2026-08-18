@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { X, Copy, Check, MessageSquare, Sparkles } from 'lucide-react';
 
 interface ZaloReportModalProps {
-  /** Văn bản báo cáo đã được tạo sẵn ở server (lib/settlement/report.ts). */
+  /** Report text already generated on the server (lib/settlement/report.ts). */
   report: string;
   onClose: () => void;
 }
@@ -18,7 +18,7 @@ export const ZaloReportModal: React.FC<ZaloReportModalProps> = ({ report, onClos
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Trình duyệt chặn clipboard: văn bản vẫn hiển thị để người dùng tự bôi đen.
+      // Browser blocked the clipboard: the text stays on screen so the user can select it manually.
     }
   };
 
@@ -65,7 +65,7 @@ export const ZaloReportModal: React.FC<ZaloReportModalProps> = ({ report, onClos
           </div>
         </div>
 
-        {/* Footer: một nút sao chép duy nhất */}
+        {/* Footer: a single copy button */}
         <div className="flex justify-end items-center gap-2 border-t border-slate-100 bg-slate-50 px-6 py-3">
           <button
             type="button"

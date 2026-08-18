@@ -17,7 +17,7 @@ interface MemberViewProps {
   members: ViewMemberWithQr[];
   settlementRows: ViewSettlementRow[];
   sessionCount: number;
-  /** Người xem có quyền ghi hay không. Chốt chặn thật nằm ở Server Action. */
+  /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
 }
 
@@ -30,7 +30,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'list' | 'single' | 'bulk'>('list');
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
-  /** Đổi giá trị để buộc form dựng lại (xóa trắng ô nhập) — chỉ khi thực sự cần. */
+  /** Bumped to force the form to remount (clearing its inputs) — only when actually needed. */
   const [formKey, setFormKey] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,7 +70,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
   };
 
   const handleStartAdd = () => {
-    // Bấm lại đúng tab đang mở thì không được xóa những gì đang gõ dở.
+    // Re-clicking the tab that is already open must not wipe what is half-typed.
     if (activeTab === 'single' && !editingMemberId) return;
     setEditingMemberId(null);
     setErrorMessage(null);
@@ -89,7 +89,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
     const input = {
       name: values.name.trim(),
       phone: values.phone.trim() || null,
-      // Server Action ghi đè color bằng giá trị nhận được, nên phải gửi lại màu cũ.
+      // The Server Action overwrites color with whatever it receives, so resend the old color.
       color: editingMember?.color ?? null,
       isPermanent: values.isPermanent,
       qrFile: values.qrFile,
@@ -108,7 +108,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
       () => createMember(monthKey, input).then(() => undefined),
       () => {
         if (keepOpen) {
-          // Giữ form mở, chỉ xóa trắng để gõ tiếp người kế tiếp.
+          // Keep the form open, just clear it to type the next person.
           setFormKey((k) => k + 1);
         } else {
           goToList();
@@ -133,7 +133,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
     const row = rowByMemberId.get(m.id);
     const hasHistory = !!row && (row.sessionsAttendedCount > 0 || row.totalPaid > 0);
 
-    // Người vừa gõ nhầm tên, chưa dính buổi nào, chưa ứng đồng nào: gỡ thẳng.
+    // Someone just mistyped, with no sessions attended and nothing paid: remove right away.
     if (!hasHistory) {
       handleRemove(m.id);
       return;
@@ -175,7 +175,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Điều hướng giữa các tab — chỉ có ý nghĩa khi được phép ghi */}
+      {/* Tab navigation — only meaningful when writing is allowed */}
       {isAdmin && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs">
         <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -244,7 +244,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
             </div>
           )}
 
-          {/* Tìm kiếm & bộ lọc */}
+          {/* Search & filters */}
           {members.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="relative w-full sm:w-72">
@@ -318,7 +318,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
             </div>
           )}
 
-          {/* Danh sách */}
+          {/* List */}
           {members.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-10 text-center space-y-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 mx-auto">
@@ -405,7 +405,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
         />
       )}
 
-      {/* Chỉ hỏi lại khi người này đã có dữ liệu trong kỳ */}
+      {/* Only ask for confirmation when this person already has data in the period */}
       {memberToRemove && (
         <ConfirmDialog
           isOpen={true}
