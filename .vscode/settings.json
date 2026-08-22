@@ -1,0 +1,8 @@
+{
+  // Use the TypeScript that ships with the project, not the one bundled with
+  // the editor. Without this the editor was checking with a much newer compiler
+  // than `bun run lint` uses, and reported errors the project's own check could
+  // not see.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true
+}
