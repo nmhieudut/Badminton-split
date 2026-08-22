@@ -23,8 +23,12 @@ const SUPER_ADMIN_ONLY_FILES = new Set(['admins.ts']);
  */
 const PUBLIC_ACTIONS = new Map<string, string>([
   [
-    'settlement.ts → toggleTransferSettled',
-    'Người vừa chuyển tiền tự tích; bắt đăng nhập chỉ để bấm một nút là rào cản lớn hơn giá trị nó bảo vệ.',
+    'settlement.ts → recordPayment',
+    'Người vừa chuyển tiền tự tích; bắt đăng nhập chỉ để bấm một nút là rào cản lớn hơn giá trị nó bảo vệ. Mọi lần ghi đều hiện trên trang lịch sử nên sai là thấy ngay.',
+  ],
+  [
+    'settlement.ts → undoLastPayment',
+    'Hoàn tác cú bấm nhầm của chính người vừa ghi; họ thường không phải admin, bắt đi nhờ người khác gỡ còn tệ hơn rủi ro.',
   ],
 ]);
 

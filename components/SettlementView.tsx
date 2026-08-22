@@ -12,7 +12,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { toggleTransferSettled } from '../app/actions/settlement';
+import { recordPayment, undoLastPayment } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import { ROUNDING_THRESHOLD } from '../lib/settlement/calculate';
 import type { ViewSettlement, ViewTransfer } from '../lib/view-types';
@@ -64,7 +64,13 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleTransferSettled(monthKey, t.fromMemberId, t.toMemberId);
+        // Ticking records what is still outstanding, so a debt that grew after
+        // an earlier payment adds a second entry rather than overwriting it.
+        if (t.isSettled) {
+          await undoLastPayment(monthKey, t.fromMemberId, t.toMemberId);
+        } else {
+          await recordPayment(monthKey, t.fromMemberId, t.toMemberId, t.remaining);
+        }
         if (willComplete) {
           try {
             confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -275,9 +281,23 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                       </div>
 
                       <div className="pt-1">
-                        <span className="font-mono text-lg font-black text-slate-900">
-                          {formatVND(t.amount)}
-                        </span>
+                        <p className="tabular font-mono text-lg font-bold text-slate-900">
+                          {formatVND(t.remaining)}
+                        </p>
+                        {/* Overpaying is a normal thing to do — people send
+                            round numbers — so say so rather than leaving a
+                            confusing "đã trả 38.000 / 20.000". */}
+                        {t.paidAmount > t.amount ? (
+                          <p className="tabular font-mono text-[11px] font-semibold text-emerald-700">
+                            đã trả dư {formatVND(t.paidAmount - t.amount)}
+                          </p>
+                        ) : (
+                          t.paidAmount > 0 && (
+                            <p className="tabular font-mono text-[11px] text-slate-400">
+                              đã trả {formatVND(t.paidAmount)} / {formatVND(t.amount)}
+                            </p>
+                          )
+                        )}
                       </div>
                     </div>
 
@@ -318,7 +338,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                             className="mx-auto h-auto w-full max-w-[220px] rounded-lg bg-white object-contain shadow-2xs"
                           />
                           <p className="mt-2 text-center text-[11px] text-slate-400">
-                            Quét để chuyển {formatVND(t.amount)} cho {t.toMemberName}
+                            Quét để chuyển {formatVND(t.remaining)} cho {t.toMemberName}
                           </p>
                           <div className="mt-2 flex justify-center">
                             <QrSaveButton url={qrUrl} personName={t.toMemberName} />
@@ -333,10 +353,36 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                   )}
 
                   {/*
-                    Mark as transferred — keyed by the pair of people, not by the
-                    amount. Open to signed-out guests too: whoever just sent the
-                    money ticks it themselves, and forcing them to sign in just to
-                    press one button is a bigger barrier than what it protects.
+                    Where the figure comes from. Every line names an evening the
+                    payer was actually at, so the total can be checked against
+                    something that happened rather than taken on trust.
+                  */}
+                  <ul className="mt-3 space-y-1 border-t border-slate-100 pt-2.5 text-[11px]">
+                    {t.lines.map((line, i) => (
+                      <li
+                        key={`${line.date}-${line.label}-${i}`}
+                        className="flex items-baseline justify-between gap-2"
+                      >
+                        <span className="tabular truncate font-mono text-slate-400">
+                          {line.date.split('-').slice(1).reverse().join('/')} · {line.label}
+                        </span>
+                        <span
+                          className={`tabular shrink-0 font-mono ${
+                            line.amount < 0 ? 'text-emerald-700' : 'text-slate-500'
+                          }`}
+                        >
+                          {line.amount < 0 ? '−' : ''}
+                          {formatVND(Math.abs(line.amount))}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/*
+                    Recording a transfer is open to signed-out guests: whoever
+                    just sent the money ticks it themselves, and forcing them to
+                    sign in for one button is a bigger barrier than what it
+                    protects. Every entry shows on the history screen.
                   */}
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
                     <button
@@ -359,8 +405,10 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                         {isBusy
                           ? 'Đang lưu...'
                           : t.isSettled
-                            ? 'Đã thanh toán'
-                            : 'Đánh dấu đã chuyển'}
+                            ? 'Đã chuyển đủ'
+                            : t.paidAmount > 0
+                              ? `Đánh dấu đã chuyển nốt ${formatVND(t.remaining)}`
+                              : 'Đánh dấu đã chuyển'}
                       </span>
                     </button>
                   </div>

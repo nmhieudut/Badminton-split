@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, lt } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from './index';
 import {
   admins,
@@ -8,9 +9,9 @@ import {
   monthMembers,
   months,
   sessionAttendees,
-  settledTransfers,
+  payments,
 } from './schema';
-import { calculateSettlement } from '../lib/settlement/calculate';
+import { ROUNDING_THRESHOLD, calculateSettlement } from '../lib/settlement/calculate';
 
 export async function listMonthKeys(): Promise<string[]> {
   const rows = await db
@@ -59,10 +60,10 @@ export async function getMonthData(monthKey: string) {
 
 
 
-  const settledRows = await db
+  const paymentRows = await db
     .select()
-    .from(settledTransfers)
-    .where(eq(settledTransfers.monthId, month.id));
+    .from(payments)
+    .where(eq(payments.monthId, month.id));
 
   const attendeesBySession = groupBy(
     attendeeRows,
@@ -95,7 +96,13 @@ export async function getMonthData(monthKey: string) {
     })),
   });
 
-  const settledKeys = new Set(settledRows.map((r) => `${r.fromMemberId}::${r.toMemberId}`));
+  // What has actually been sent between each pair, so a debt that grew after
+  // someone paid shows the shortfall rather than reading as settled.
+  const paidByPair = new Map<string, number>();
+  for (const p of paymentRows) {
+    const key = `${p.fromMemberId}::${p.toMemberId}`;
+    paidByPair.set(key, (paidByPair.get(key) ?? 0) + p.amount);
+  }
 
   return {
     month,
@@ -103,10 +110,16 @@ export async function getMonthData(monthKey: string) {
     dailySessions: sessionsWithAttendees,
     settlement: {
       ...settlement,
-      transfers: settlement.transfers.map((t) => ({
-        ...t,
-        isSettled: settledKeys.has(`${t.fromMemberId}::${t.toMemberId}`),
-      })),
+      transfers: settlement.transfers.map((t) => {
+        const paidAmount = paidByPair.get(`${t.fromMemberId}::${t.toMemberId}`) ?? 0;
+        const remaining = Math.max(0, t.amount - paidAmount);
+        return {
+          ...t,
+          paidAmount,
+          remaining,
+          isSettled: remaining <= ROUNDING_THRESHOLD,
+        };
+      }),
     },
   };
 }
@@ -260,4 +273,29 @@ export async function listRoster(monthKey: string) {
     hasQr: qrImagePath !== null,
     inMonth: inMonth.has(m.id),
   }));
+}
+
+/** Every transfer recorded in a period, newest first — the history screen. */
+export async function listPayments(monthKey: string) {
+  const month = await getMonthByKey(monthKey);
+  if (!month) return [];
+
+  const fromMember = alias(members, 'from_member');
+  const toMember = alias(members, 'to_member');
+
+  return db
+    .select({
+      id: payments.id,
+      amount: payments.amount,
+      paidAt: payments.paidAt,
+      fromMemberId: payments.fromMemberId,
+      fromName: fromMember.name,
+      toMemberId: payments.toMemberId,
+      toName: toMember.name,
+    })
+    .from(payments)
+    .innerJoin(fromMember, eq(fromMember.id, payments.fromMemberId))
+    .innerJoin(toMember, eq(toMember.id, payments.toMemberId))
+    .where(eq(payments.monthId, month.id))
+    .orderBy(desc(payments.paidAt));
 }

@@ -12,8 +12,7 @@ import {
   HandCoins,
   MapPin,
   ShieldCheck,
-  Users,
-} from 'lucide-react';
+  Users, Receipt } from 'lucide-react';
 import type { ViewMonth } from '../lib/view-types';
 import { AuthButton } from './AuthButton';
 import { AdminsModal, type UserRow } from './AdminsModal';
@@ -90,6 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       badge: unsettledCount,
     },
     { href: `${base}/members`, label: 'Thành viên', icon: Users, badge: 0 },
+    { href: `${base}/history`, label: 'Lịch sử', icon: Receipt, badge: 0 },
   ];
 
   const isActive = (href: string) => pathname === href;

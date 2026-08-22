@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { Check, RefreshCw, ScanLine, UserRound } from 'lucide-react';
-import { toggleTransferSettled } from '../app/actions/settlement';
+import { recordPayment } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import type { ViewSettlementRow, ViewTransfer } from '../lib/view-types';
 import { QrSaveButton } from './QrSaveButton';
@@ -48,7 +48,9 @@ export const MySettlement: React.FC<MySettlementProps> = ({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleTransferSettled(monthKey, t.fromMemberId, t.toMemberId);
+        // Records what is still outstanding, so paying again after the group
+        // has played once more adds an entry instead of overwriting the first.
+        await recordPayment(monthKey, t.fromMemberId, t.toMemberId, t.remaining);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Không lưu được. Thử lại giúp.');
       } finally {
@@ -127,9 +129,14 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Bạn cần chuyển
                 </p>
-                <p className="mt-1 font-mono text-3xl font-black text-indigo-600 sm:text-4xl">
-                  {formatVND(t.amount)}
+                <p className="tabular mt-1 font-mono text-3xl font-bold text-indigo-600 sm:text-4xl">
+                  {formatVND(t.remaining)}
                 </p>
+                {t.paidAmount > 0 && (
+                  <p className="tabular mt-0.5 font-mono text-xs text-slate-400">
+                    đã trả {formatVND(t.paidAmount)} trên tổng {formatVND(t.amount)}
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-slate-600">
                   cho <span className="font-bold text-slate-900">{t.toMemberName}</span>
                 </p>
@@ -200,8 +207,8 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                     {t.fromMemberName}
                   </span>
                   <span className="flex shrink-0 items-center gap-3">
-                    <span className="font-mono text-sm font-bold text-slate-900">
-                      {formatVND(t.amount)}
+                    <span className="tabular font-mono text-sm font-bold text-slate-900">
+                      {formatVND(t.remaining)}
                     </span>
                     {(
                       <button

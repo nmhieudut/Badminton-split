@@ -83,9 +83,20 @@ export const sessionAttendees = pgTable(
   (t) => [primaryKey({ columns: [t.sessionId, t.memberId] })]
 );
 
-export const settledTransfers = pgTable(
-  'settled_transfers',
+/**
+ * Every transfer somebody has actually made, as a ledger rather than a flag.
+ *
+ * The table this replaces recorded only the pair of people, so "paid" was a
+ * yes/no with no amount attached. Someone would settle up, another session got
+ * recorded afterwards, their share went up — and the old mark still read as
+ * fully paid while they were short. Keeping each payment as its own row means
+ * what is still owed is the current debt minus what has been sent, and a later
+ * session can never make a past payment untrue.
+ */
+export const payments = pgTable(
+  'payments',
   {
+    id: uuid('id').primaryKey().defaultRandom(),
     monthId: uuid('month_id')
       .notNull()
       .references(() => months.id, { onDelete: 'cascade' }),
@@ -95,9 +106,10 @@ export const settledTransfers = pgTable(
     toMemberId: uuid('to_member_id')
       .notNull()
       .references(() => members.id, { onDelete: 'cascade' }),
-    settledAt: timestamp('settled_at', { withTimezone: true }).notNull().defaultNow(),
+    amount: integer('amount').notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.monthId, t.fromMemberId, t.toMemberId] })]
+  (t) => [index('payments_month_idx').on(t.monthId, t.paidAt)]
 );
 
 /**

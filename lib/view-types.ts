@@ -1,4 +1,4 @@
-import type { getMonthData, getSessionDefaults, listRoster } from '../db/queries';
+import type { getMonthData, getSessionDefaults, listPayments, listRoster } from '../db/queries';
 
 /**
  * The shapes the UI receives, inferred directly from the query functions so the
@@ -21,3 +21,6 @@ export type ViewMemberWithQr = ViewMember & { qrUrl: string | null };
 
 /** One person in the shared roster, flagged with whether they are already in the period. */
 export type RosterEntry = Awaited<ReturnType<typeof listRoster>>[number];
+
+/** One recorded transfer, as shown on the history screen. */
+export type PaymentRow = Awaited<ReturnType<typeof listPayments>>[number];
