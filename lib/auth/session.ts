@@ -49,6 +49,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
  * and the admins table counts as a super admin.
  */
 export async function getRole(): Promise<Role> {
+  const forced = forcedRoleForLocalTesting();
+  if (forced !== undefined) return forced;
+
   const user = await getSessionUser();
   const email = user?.email?.trim().toLowerCase();
   if (!email) return null;
@@ -62,6 +65,28 @@ export async function getRole(): Promise<Role> {
     .limit(1);
 
   return row ? 'admin' : null;
+}
+
+/**
+ * A role forced through E2E_ROLE, for driving admin-only screens in a headless
+ * browser on a developer machine, where Google sign-in is not possible.
+ *
+ * Refused outright in production: a variable that could hand out admin on the
+ * deployed app would be a back door, so the check is on NODE_ENV rather than
+ * on the variable being absent. Returns undefined when not in play so the
+ * normal path runs.
+ */
+export function forcedRoleForLocalTesting(
+  env: Record<string, string | undefined> = process.env
+): Role | undefined {
+  const forced = env.E2E_ROLE;
+  if (!forced) return undefined;
+  if (env.NODE_ENV === 'production') {
+    console.warn('[phân quyền] E2E_ROLE bị bỏ qua: không dùng được ở production');
+    return undefined;
+  }
+  if (forced === 'admin' || forced === 'super_admin') return forced;
+  return null;
 }
 
 /** Generic message; it reveals nothing about how the permission check works. */

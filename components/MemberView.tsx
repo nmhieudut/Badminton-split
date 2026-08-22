@@ -142,10 +142,14 @@ export const MemberView: React.FC<MemberViewProps> = ({
   };
 
   const handleRemoveQr = (memberId: string) => {
-    run(
-      () => removeMemberQr(monthKey, memberId),
-      () => setQrToRemove(null)
-    );
+    // Close the confirmation BEFORE the action runs, not after it resolves.
+    // The action revalidates the page, and the fresh data arrives while the
+    // dialog is still open: the member's QR is now null, so the form drops the
+    // "Xoá ảnh QR" button that opened the dialog — the very element the dialog
+    // returns focus to when it closes. Closing first means there is nothing
+    // left for that return-focus to land on, and the delete proceeds quietly.
+    setQrToRemove(null);
+    run(() => removeMemberQr(monthKey, memberId));
   };
 
   const handleRequestRemove = (m: ViewMemberWithQr) => {
@@ -161,13 +165,13 @@ export const MemberView: React.FC<MemberViewProps> = ({
   };
 
   const handleRemove = (memberId: string) => {
-    run(
-      () => removeMemberFromMonth(monthKey, memberId),
-      () => {
-        setMemberToRemove(null);
-        if (editingMemberId === memberId) goToList();
-      }
-    );
+    // Same ordering as handleRemoveQr: the confirmation closes before the
+    // action runs. Revalidation drops this member's card from the list while
+    // the dialog would still be open, and the card held the button that
+    // opened it.
+    setMemberToRemove(null);
+    if (editingMemberId === memberId) goToList();
+    run(() => removeMemberFromMonth(monthKey, memberId));
   };
 
   const filteredMembers = useMemo(() => {
