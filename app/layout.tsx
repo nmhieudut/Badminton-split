@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Be_Vietnam_Pro, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
+import { ConsoleErrorReporter } from '../components/ConsoleErrorReporter';
 
 /*
  * Be Vietnam Pro is drawn for Vietnamese: the app is entirely in Vietnamese and
@@ -41,6 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`notranslate ${beVietnam.variable} ${plexMono.variable}`}
     >
       <body className="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
+        {/* Sends React's own console errors to the server log; they never reach
+            the error boundary because React recovers from them. */}
+        <ConsoleErrorReporter />
         {children}
       </body>
     </html>
