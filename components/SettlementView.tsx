@@ -10,6 +10,7 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  TriangleAlert,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { recordPayment, undoLastPayment } from '../app/actions/settlement';
@@ -50,7 +51,8 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const { rows, transfers, totalCost, totalCourtCost, totalShuttleCost } = settlement;
+  const { rows, transfers, orphanPayments, totalCost, totalCourtCost, totalShuttleCost } =
+    settlement;
 
   const completedTransfersCount = transfers.filter((t) => t.isSettled).length;
   const maxAbsBalance = rows.reduce((max, r) => Math.max(max, Math.abs(r.netBalance)), 0);
@@ -90,6 +92,42 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
 
   return (
     <div id="settlement-view-container" className="space-y-8">
+      {/*
+        A transfer that no longer matches any debt. It happens when a session is
+        edited after somebody paid — the person who fronted the money is changed,
+        or an attendee is removed — and the debt moves elsewhere. The payment is
+        still real, so it is named here instead of quietly vanishing.
+      */}
+      {orphanPayments.length > 0 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-2">
+            <TriangleAlert className="mt-px h-4 w-4 shrink-0 text-amber-600" />
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-amber-900">
+                Có khoản đã chuyển nhưng giờ không còn nợ ai
+              </h3>
+              <p className="mt-0.5 text-xs text-amber-800">
+                Buổi đánh đã được sửa sau khi những khoản này được chuyển, nên khoản nợ đã
+                chuyển sang người khác. Cần trả lại hoặc trừ vào lần sau.
+              </p>
+              <ul className="mt-2 space-y-1">
+                {orphanPayments.map((p) => (
+                  <li
+                    key={`${p.fromMemberId}::${p.toMemberId}`}
+                    className="tabular flex items-baseline justify-between gap-2 font-mono text-xs text-amber-900"
+                  >
+                    <span className="truncate">
+                      {p.fromMemberName} → {p.toMemberName}
+                    </span>
+                    <span className="shrink-0 font-bold">{formatVND(p.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/*
         For a group this size each person's balance IS the summary, so it leads.
         The month totals sit underneath as supporting detail; they used to be

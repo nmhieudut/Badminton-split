@@ -11,7 +11,8 @@ import {
   sessionAttendees,
   payments,
 } from './schema';
-import { ROUNDING_THRESHOLD, calculateSettlement } from '../lib/settlement/calculate';
+import { calculateSettlement } from '../lib/settlement/calculate';
+import { applyPayments } from '../lib/settlement/apply-payments';
 
 export async function listMonthKeys(): Promise<string[]> {
   const rows = await db
@@ -96,13 +97,12 @@ export async function getMonthData(monthKey: string) {
     })),
   });
 
-  // What has actually been sent between each pair, so a debt that grew after
-  // someone paid shows the shortfall rather than reading as settled.
-  const paidByPair = new Map<string, number>();
-  for (const p of paymentRows) {
-    const key = `${p.fromMemberId}::${p.toMemberId}`;
-    paidByPair.set(key, (paidByPair.get(key) ?? 0) + p.amount);
-  }
+  const nameOf = (id: string) => memberRows.find((m) => m.id === id)?.name ?? '';
+
+  // Offsets what has been sent against what is currently owed. The debt is
+  // recomputed from the sessions above, so editing a session moves the amount
+  // owed while the payments stay put, and the difference shows as what is left.
+  const settled = applyPayments(settlement.transfers, paymentRows, nameOf);
 
   return {
     month,
@@ -110,16 +110,9 @@ export async function getMonthData(monthKey: string) {
     dailySessions: sessionsWithAttendees,
     settlement: {
       ...settlement,
-      transfers: settlement.transfers.map((t) => {
-        const paidAmount = paidByPair.get(`${t.fromMemberId}::${t.toMemberId}`) ?? 0;
-        const remaining = Math.max(0, t.amount - paidAmount);
-        return {
-          ...t,
-          paidAmount,
-          remaining,
-          isSettled: remaining <= ROUNDING_THRESHOLD,
-        };
-      }),
+      transfers: settled.transfers,
+      /** Money sent to someone the payer no longer owes — never dropped silently. */
+      orphanPayments: settled.orphans,
     },
   };
 }
