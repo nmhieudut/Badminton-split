@@ -125,6 +125,12 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
   const numShuttlePrice = parseVNDInput(shuttlecockPriceInput);
   const overriddenShuttleTotal = overrideShuttleTotal ? parseVNDInput(shuttleTotalInput) : null;
   const totalShuttleFee = overriddenShuttleTotal ?? shuttlecockCount * numShuttlePrice;
+  // Starts the "extras" disclosure open when there is already something in
+  // it, so editing a session never hides a fee or note that was recorded.
+  const hasExtras = Boolean(
+    (initialData?.drinkFee ?? 0) > 0 || (initialData?.otherFee ?? 0) > 0 || initialData?.note
+  );
+
   const numDrinkFee = parseVNDInput(drinkFeeInput);
   const numOtherFee = parseVNDInput(otherFeeInput);
   const totalSessionCost = numCourtFee + totalShuttleFee + numDrinkFee + numOtherFee;
@@ -451,11 +457,22 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
           </div>
 
-          {/* 3. Drinks & extra fees */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <span>🥤</span> 3. Nước Uống / Phụ Phí Buổi (Tùy chọn)
-            </h4>
+          {/*
+            Drinks, other fees and the note live behind a disclosure. After
+            three sessions nobody had used any of them, and an empty section
+            with four inputs was most of the form's height on a phone. They
+            open on their own when editing a session that has something in
+            them, so nothing already recorded is ever hidden.
+          */}
+          <details
+            open={hasExtras}
+            className="group rounded-2xl border border-slate-200 bg-slate-50/60 open:bg-white"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-xs font-bold uppercase tracking-wider text-slate-600 marker:hidden [&::-webkit-details-marker]:hidden">
+              <span>Thêm: nước, phụ phí, ghi chú</span>
+              <span className="text-slate-400 transition-transform group-open:rotate-180">⌄</span>
+            </summary>
+          <div className="space-y-3 px-4 pb-4">
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
@@ -527,13 +544,29 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
           </div>
 
+          {/* Note */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+              Ghi chú
+            </label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="VD: Đánh đôi kéo dài 2 tiếng, bạn Nam về sớm..."
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+            />
+          </div>
+
+          </details>
+
           {/* 4. Attendance check-in */}
           <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-indigo-100 pb-2">
               <div className="flex items-center gap-1.5">
                 <Users className="h-4 w-4 text-indigo-600" />
                 <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-900">
-                  4. Điểm Danh Có Mặt ({attendeeIds.length}/{members.length})
+                  3. Điểm danh có mặt ({attendeeIds.length}/{members.length})
                 </h4>
               </div>
 
@@ -599,20 +632,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 );
               })}
             </div>
-          </div>
-
-          {/* Note */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-              Ghi chú thêm cho buổi này
-            </label>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="VD: Đánh đôi kéo dài 2 tiếng, bạn Nam về sớm..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
-            />
           </div>
 
           {/* Real-time calculation summary preview */}
