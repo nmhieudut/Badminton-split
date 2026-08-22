@@ -268,15 +268,15 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-4">
         <div className="flex flex-col gap-1 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">
-              Hướng Dẫn Chuyển Tiền Trực Tiếp
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+              Ai chuyển cho ai
             </h3>
             <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
-              Tối ưu số lần CK
+              Trả đúng người đã ứng
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Chỉ cần thực hiện các giao dịch trực tiếp dưới đây để tất toán mọi khoản chi:
+            Mỗi khoản ghi rõ từng buổi, đối chiếu được. Bấm Mã QR để chuyển, chuyển xong thì tích.
           </p>
         </div>
 

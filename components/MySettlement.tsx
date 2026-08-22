@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Check, RefreshCw, ScanLine, UserRound } from 'lucide-react';
+import { Check, RefreshCw, ScanLine, UserRound, MessageSquareText } from 'lucide-react';
 import { recordPayment } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
+import { buildReminders } from '../lib/settlement/reminder';
 import type { ViewSettlementRow, ViewTransfer } from '../lib/view-types';
 import { QrSaveButton } from './QrSaveButton';
 import { ME_COOKIE, ME_COOKIE_DAYS } from '../lib/me-cookie';
@@ -40,6 +41,34 @@ export const MySettlement: React.FC<MySettlementProps> = ({
   const changePerson = () => {
     document.cookie = `${ME_COOKIE}=;path=/;max-age=0;samesite=lax`;
     setMeId(null);
+  };
+
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  /**
+   * Puts a private reminder on the clipboard — one message per person, naming
+   * the evenings behind the amount. The group report already exists; this is
+   * for nudging one person without posting everyone's balances.
+   */
+  const copyReminder = async (items: ViewTransfer[], key: string) => {
+    const qrPageUrl = `${window.location.origin}/${monthKey}/settlement`;
+    const text = buildReminders(
+      items.map((t) => ({
+        fromMemberName: t.fromMemberName,
+        toMemberName: t.toMemberName,
+        remaining: t.remaining,
+        paidAmount: t.paidAmount,
+        lines: t.lines,
+        qrPageUrl: qrUrls[t.toMemberId] ? qrPageUrl : undefined,
+      }))
+    );
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2500);
+    } catch {
+      window.prompt('Sao chép tin nhắn này:', text);
+    }
   };
 
   const markPaid = (t: ViewTransfer) => {
@@ -191,9 +220,19 @@ export const MySettlement: React.FC<MySettlementProps> = ({
             {formatVND(unpaidToMe.reduce((s, t) => s + t.amount, 0))}
           </p>
           <p className="mt-1 text-sm text-slate-600">
-            còn {unpaidToMe.length} người chưa chuyển.
- Tích khi tiền đã về tài khoản.
+            còn {unpaidToMe.length} người chưa chuyển. Tích khi tiền đã về tài khoản.
           </p>
+
+          {unpaidToMe.length > 1 && (
+            <button
+              type="button"
+              onClick={() => copyReminder(unpaidToMe, 'all')}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
+            >
+              {copiedKey === 'all' ? <Check className="h-3.5 w-3.5" /> : <MessageSquareText className="h-3.5 w-3.5" />}
+              {copiedKey === 'all' ? 'Đã sao chép' : `Nhắc cả ${unpaidToMe.length} người`}
+            </button>
+          )}
 
           <ul className="mt-4 space-y-2">
             {unpaidToMe.map((t) => {
@@ -206,10 +245,18 @@ export const MySettlement: React.FC<MySettlementProps> = ({
                   <span className="min-w-0 truncate text-sm font-semibold text-slate-800">
                     {t.fromMemberName}
                   </span>
-                  <span className="flex shrink-0 items-center gap-3">
+                  <span className="flex shrink-0 items-center gap-2">
                     <span className="tabular font-mono text-sm font-bold text-slate-900">
                       {formatVND(t.remaining)}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => copyReminder([t], key)}
+                      title={`Sao chép tin nhắn nhắc ${t.fromMemberName}`}
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+                    >
+                      {copiedKey === key ? <Check className="h-3.5 w-3.5" /> : 'Nhắc'}
+                    </button>
                     {(
                       <button
                         type="button"
