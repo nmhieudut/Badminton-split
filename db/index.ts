@@ -28,21 +28,38 @@ function getDb(): Db {
     throw new ConfigError('Thiếu biến môi trường DATABASE_URL');
   }
 
-  // On Vercel several invocations can reuse the same container, so the client
-  // is kept at module scope. `prepare: false` is mandatory with Supabase's
-  // transaction pooler — the pooler does not keep prepared statements across
-  // transactions.
   const client =
-    globalForDb.client ?? postgres(connectionString, { prepare: false, ssl: 'require' });
+    globalForDb.client ??
+    postgres(connectionString, {
+      // Mandatory with Supabase's transaction pooler: it does not keep
+      // prepared statements across transactions.
+      prepare: false,
+      ssl: 'require',
+      // Deliberately left at the library default rather than lowered. Shrinking
+      // it looks like the obvious way to be kind to the pooler, but measured
+      // against this pooler an exhausted pool WEDGES instead of queueing: at
+      // max=1 five concurrent queries never return, at max=3 twenty never
+      // return, while max=10 handles twenty in about a second. The layout runs
+      // queries concurrently, so a smaller pool would hang the whole app. What
+      // actually protects the pooler is the caching below — one pool per
+      // container instead of one per property access.
+      max: 10,
+      // Release a connection that has gone quiet instead of holding it for the
+      // life of the container.
+      idle_timeout: 20,
+      connect_timeout: 10,
+    });
 
-  const instance = drizzle(client, { schema });
+  // Cached unconditionally. This used to be guarded by
+  // `NODE_ENV !== 'production'`, which is backwards: `db` is a Proxy that calls
+  // this factory on EVERY property access, so in production a single request
+  // opened one pool for select, another for insert, another for transaction.
+  // Connections piled up until the pooler answered "(EMAXCONN) max client
+  // connections reached, limit: 200" and every page and action started failing.
+  globalForDb.client = client;
+  globalForDb.db = drizzle(client, { schema });
 
-  if (process.env.NODE_ENV !== 'production') {
-    globalForDb.client = client;
-    globalForDb.db = instance;
-  }
-
-  return instance;
+  return globalForDb.db;
 }
 
 /**

@@ -4,13 +4,31 @@ import { ConfigError } from './errors';
 const BUCKET = 'member-qr';
 const SIGNED_URL_TTL = 60 * 60; // one hour
 
+/**
+ * The service-role client, built once per container.
+ *
+ * It used to be constructed on every call, and the members page calls
+ * getQrSignedUrl once per person — so a single page view built as many clients
+ * as there are members. Nothing here holds a database connection, so this was
+ * never the cause of an outage, but there is no reason to rebuild it.
+ */
+const globalForStorage = globalThis as unknown as {
+  storageAdmin?: ReturnType<typeof createClient>;
+};
+
 function admin() {
+  if (globalForStorage.storageAdmin) return globalForStorage.storageAdmin;
+
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     throw new ConfigError('Thiếu SUPABASE_URL hoặc SUPABASE_SERVICE_ROLE_KEY');
   }
-  return createClient(url, key, { auth: { persistSession: false } });
+
+  globalForStorage.storageAdmin = createClient(url, key, {
+    auth: { persistSession: false },
+  });
+  return globalForStorage.storageAdmin;
 }
 
 /** File extension derived from the MIME type, so Storage serves the right content-type on download. */
