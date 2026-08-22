@@ -31,6 +31,10 @@ const PUBLIC_ACTIONS = new Map<string, string>([
     'Hoàn tác cú bấm nhầm của chính người vừa ghi; họ thường không phải admin, bắt đi nhờ người khác gỡ còn tệ hơn rủi ro.',
   ],
   [
+    'client-error.ts → reportClientError',
+    'Ghi lỗi crash phía client lên log server. Khách cũng crash nên không thể bắt đăng nhập; chỉ ghi một dòng log đã cắt ngắn, không ghi DB.',
+  ],
+  [
     'qr-upload.ts → uploadQrViaLink',
     'Thành viên tự tải QR qua link mà không cần tài khoản. Quyền nằm ở chính token: không đoán được, gắn một người, có hạn, dùng một lần.',
   ],

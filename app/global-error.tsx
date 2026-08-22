@@ -1,5 +1,6 @@
 'use client';
 
+import { reportClientError } from './actions/client-error';
 import { useEffect } from 'react';
 
 /**
@@ -18,6 +19,14 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('[lỗi toàn cục]', error.message, error.digest ?? '');
+    reportClientError({
+      message: error.message,
+      digest: error.digest,
+      path: window.location.pathname,
+      stack: error.stack,
+    }).catch(() => {
+      // Reporting must never itself become a second error.
+    });
   }, [error]);
 
   return (

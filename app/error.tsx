@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { reportClientError } from './actions/client-error';
 
 /**
  * The last safety net.
@@ -19,8 +20,17 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Details go to the server log; the user only sees the generic sentence.
     console.error('[trang lỗi]', error.message, error.digest ?? '');
+    // Also to the server log, where an operator can actually read it — a
+    // browser console on someone else's phone is not something anyone sees.
+    reportClientError({
+      message: error.message,
+      digest: error.digest,
+      path: window.location.pathname,
+      stack: error.stack,
+    }).catch(() => {
+      // Reporting must never itself become a second error.
+    });
   }, [error]);
 
   return (
@@ -30,6 +40,11 @@ export default function Error({
         Thao tác vừa rồi không hoàn tất. Dữ liệu của bạn vẫn nguyên vẹn — thử lại
         thường là xong.
       </p>
+      {/* The digest pairs this screen with the matching server log line. It is
+          an opaque hash, safe to show, and is what to quote when reporting. */}
+      {error.digest && (
+        <p className="tabular mt-3 font-mono text-[11px] text-slate-400">Mã lỗi: {error.digest}</p>
+      )}
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
         <button
