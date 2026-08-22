@@ -16,7 +16,7 @@ type Props =
 export function QrSelfUpload(props: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [doneFor, setDoneFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +30,25 @@ export function QrSelfUpload(props: Props) {
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  // Success must win over "invalid". Redeeming the link marks it used, so a
+  // refresh of this page after the upload sees a spent token and would
+  // otherwise replace the confirmation with "link expired" — telling the
+  // person their upload failed when it had just succeeded.
+  if (doneFor !== null) {
+    return (
+      <Shell>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="h-7 w-7" />
+        </div>
+        <h1 className="mt-5 text-xl font-extrabold tracking-tight text-slate-900">Xong rồi</h1>
+        <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">
+          Ảnh QR của <strong className="text-slate-900">{doneFor}</strong> đã được lưu. Mọi người
+          trong nhóm giờ chuyển tiền cho bạn được rồi.
+        </p>
+      </Shell>
+    );
+  }
 
   if (props.state === 'invalid') {
     return (
@@ -47,21 +66,6 @@ export function QrSelfUpload(props: Props) {
     );
   }
 
-  if (done) {
-    return (
-      <Shell>
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-          <CheckCircle2 className="h-7 w-7" />
-        </div>
-        <h1 className="mt-5 text-xl font-extrabold tracking-tight text-slate-900">Xong rồi</h1>
-        <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-500">
-          Ảnh QR của <strong className="text-slate-900">{props.name}</strong> đã được lưu. Mọi người
-          trong nhóm giờ chuyển tiền cho bạn được rồi.
-        </p>
-      </Shell>
-    );
-  }
-
   const submit = () => {
     if (!file) return;
     setError(null);
@@ -69,7 +73,7 @@ export function QrSelfUpload(props: Props) {
       try {
         const compressed = await toCompressedQrFile(file);
         await uploadQrViaLink(props.token, compressed);
-        setDone(true);
+        setDoneFor(props.name);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Không tải lên được. Thử lại giúp.');
       }

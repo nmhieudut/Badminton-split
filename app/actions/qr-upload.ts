@@ -1,7 +1,6 @@
 'use server';
 
 import { and, eq, gt, isNull } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
 import { db } from '../../db';
 import { members, qrUploadTokens } from '../../db/schema';
 import { requireAdmin } from '../../lib/auth/session';
@@ -85,5 +84,8 @@ export async function uploadQrViaLink(token: string, file: File): Promise<void> 
       .where(eq(qrUploadTokens.tokenHash, tokenHash));
   });
 
-  revalidatePath('/', 'layout');
+  // No revalidatePath here, on purpose. Every page that shows a QR is rendered
+  // on demand, so there is no cache to clear — and revalidating would re-render
+  // this very page, which would then see a spent token and replace the success
+  // screen with "link expired" right after the upload had worked.
 }
