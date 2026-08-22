@@ -51,8 +51,15 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const { rows, transfers, orphanPayments, totalCost, totalCourtCost, totalShuttleCost } =
-    settlement;
+  const {
+    rows,
+    transfers,
+    orphanPayments,
+    roundingExcess,
+    totalCost,
+    totalCourtCost,
+    totalShuttleCost,
+  } = settlement;
 
   const completedTransfersCount = transfers.filter((t) => t.isSettled).length;
   const maxAbsBalance = rows.reduce((max, r) => Math.max(max, Math.abs(r.netBalance)), 0);
@@ -228,7 +235,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
       </section>
 
       {/* Month totals — detail, not headline. */}
-      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-3 lg:grid-cols-5">
         {[
           { label: 'Tổng chi phí', value: formatVND(totalCost), sub: `${sessionCount} buổi đánh` },
           { label: 'Tiền sân', value: formatVND(totalCourtCost), sub: 'Chia theo số người mỗi buổi' },
@@ -238,6 +245,17 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
             value:
               transfers.length === 0 ? '—' : `${completedTransfersCount}/${transfers.length}`,
             sub: isAllSettled ? 'Xong hết rồi' : 'Giao dịch đã đánh dấu',
+          },
+          // Rounding every share up to a thousand collects a little more than
+          // was spent. Naming it keeps the books honest: without it the
+          // balances simply would not add up and nobody could see why.
+          {
+            label: 'Thu dư do làm tròn',
+            value: roundingExcess > 0 ? `+${formatVND(roundingExcess)}` : '0 đ',
+            sub:
+              roundingExcess > 0
+                ? 'Chia lẻ được làm tròn lên nghìn'
+                : 'Kỳ này chia chẵn, không dôi ra',
           },
         ].map((cell) => (
           <div key={cell.label} className="bg-white px-4 py-3.5">

@@ -104,10 +104,16 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     drinkShare: drinkShare.get(m.id) ?? 0,
   }));
 
+  // Shares are rounded up per person, so they come to a little more than was
+  // spent. Report the difference instead of leaving the balances quietly
+  // failing to sum to zero.
+  const totalShare = rows.reduce((sum, r) => sum + r.totalShare, 0);
+
   return {
     rows,
     transfers: buildTransfers(rows, dailySessions, memberIds),
     totalCost,
+    roundingExcess: Math.max(0, totalShare - totalCost),
     totalCourtCost,
     totalShuttleCost,
     totalOtherCost,

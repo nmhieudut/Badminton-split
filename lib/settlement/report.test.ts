@@ -67,9 +67,10 @@ describe('generateZaloReport', () => {
 
 describe('ngưỡng bỏ qua tiền lẻ dùng chung', () => {
   it('báo cáo và phép quyết toán nhất quán: dưới ngưỡng thì vừa không sinh giao dịch, vừa báo đã đủ', () => {
-    // A balance of 300 đồng: below ROUNDING_THRESHOLD, so no transfer is
-    // generated. The report must say "ĐÃ ĐỦ" and not that they still owe,
-    // otherwise the reader goes looking for a transfer that does not exist.
+    // An plays alone and pays 600đ himself. The share rounds up to 1.000, so he
+    // is 400đ out — below ROUNDING_THRESHOLD, so no transfer is generated. The
+    // report must say "ĐÃ ĐỦ" and not that he still owes, otherwise the reader
+    // goes looking for a transfer that does not exist.
     const settlement = calculateSettlement({
       members: [
         { id: 'a', name: 'An' },
@@ -89,7 +90,7 @@ describe('ngưỡng bỏ qua tiền lẻ dùng chung', () => {
           drinkPayerId: null,
           otherFee: 0,
           otherFeePayerId: null,
-          attendeeIds: ['a', 'b'],
+          attendeeIds: ['a'],
         },
       ],
     });

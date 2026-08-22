@@ -46,10 +46,12 @@ describe('calculateSettlement', () => {
       dailySessions: [session({ attendeeIds: [] })],
     });
     expect(out.rows.every((r) => r.totalShare > 0)).toBe(true);
-    expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(280000);
+    // 280.000 chia 3 = 93.333 -> mỗi người 94.000, thu dư 2.000 do làm tròn.
+    expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(282000);
+    expect(out.roundingExcess).toBe(2000);
   });
 
-  it('tổng phần chia bằng đúng tổng chi khi chia lẻ', () => {
+  it('phần chia luôn đủ bù tổng chi, phần dôi ra đúng bằng phần làm tròn', () => {
     const seven = Array.from({ length: 7 }, (_, i) => ({ id: `m${i}`, name: `M${i}` }));
     const out = calculateSettlement({
       members: seven,
@@ -61,7 +63,10 @@ describe('calculateSettlement', () => {
         }),
       ],
     });
-    expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(280000);
+    // Sân 180.000/7 -> 26.000 mỗi người; cầu 100.000/7 -> 15.000 mỗi người.
+    expect(out.rows.reduce((s, r) => s + r.totalShare, 0)).toBe(287000);
+    expect(out.roundingExcess).toBe(7000);
+    expect(out.roundingExcess).toBe(287000 - out.totalCost);
   });
 
   it('shuttlecockTotalFee thắng phép nhân số lượng với đơn giá', () => {
@@ -74,16 +79,18 @@ describe('calculateSettlement', () => {
 
 
 
-  it('tổng số dư ròng của cả nhóm bằng không', () => {
+  it('số dư ròng cả nhóm chỉ lệch đúng bằng phần thu dư do làm tròn', () => {
+    // Trước đây tổng này luôn bằng 0. Từ khi mỗi người làm tròn lên nghìn, người
+    // ứng tiền được hoàn nhiều hơn số đã bỏ ra đúng bằng phần dôi ra — và phần
+    // đó phải được báo cáo, không được lặng lẽ biến mất.
     const out = calculateSettlement({ members, dailySessions: [session()] });
-    expect(out.rows.reduce((s, r) => s + r.netBalance, 0)).toBe(0);
+    expect(out.rows.reduce((s, r) => s + r.netBalance, 0) + out.roundingExcess).toBe(0);
   });
 
 
   it('không sinh giao dịch khi chênh lệch dưới ngưỡng tiền lẻ', () => {
-    // A 600đ court fee split two ways: each owes 300, and whoever fronted the
-    // money is 300 up — below the 500 threshold, so not worth asking anyone to
-    // make a transfer.
+    // An đi một mình và tự trả 600đ. Phần chia làm tròn lên 1.000, nên An lệch
+    // 400đ — dưới ngưỡng 500, không đáng sinh ra một lần chuyển khoản.
     const out = calculateSettlement({
       members: [
         { id: 'a', name: 'An' },
@@ -96,10 +103,11 @@ describe('calculateSettlement', () => {
           shuttlecockCount: 0,
           shuttlecockPricePerItem: 0,
           shuttlecockPayerId: 'a',
-          attendeeIds: ['a', 'b'],
+          attendeeIds: ['a'],
         }),
       ],
     });
+    expect(Math.abs(out.rows.find((r) => r.memberId === 'a')!.netBalance)).toBeLessThan(500);
     expect(out.transfers).toEqual([]);
   });
 
@@ -112,8 +120,10 @@ describe('calculateSettlement', () => {
     });
     expect(out.transfers).toHaveLength(2);
     expect(out.transfers.every((t) => t.toMemberId === 'a')).toBe(true);
+    // An nhận về nhiều hơn số dư ròng của mình đúng bằng phần làm tròn lên —
+    // đó là cái giá của việc không ai phải chuyển số lẻ.
     expect(out.transfers.reduce((s, t) => s + t.amount, 0)).toBe(
-      out.rows.find((r) => r.memberId === 'a')!.netBalance
+      out.rows.find((r) => r.memberId === 'a')!.netBalance + out.roundingExcess
     );
   });
 
@@ -297,8 +307,8 @@ describe('kỳ 08/2026 ngoài đời thật', () => {
   it('Tuấn chỉ nợ đúng hai người đã ứng tiền cho buổi anh có mặt', () => {
     const cua_tuan = out.transfers.filter((t) => t.fromMemberId === 'tuan');
     expect(cua_tuan.map((t) => [t.toMemberId, t.amount]).sort()).toEqual([
-      // sân 8/8 (36.000) + sân & cầu 22/8 (36.000 + 21.600)
-      ['hieu', 93600],
+      // sân 8/8 (36.000) + sân & cầu 22/8 (36.000 + 22.000)
+      ['hieu', 94000],
       // cầu 8/8
       ['phu', 20000],
     ]);
@@ -318,7 +328,12 @@ describe('kỳ 08/2026 ngoài đời thật', () => {
       .filter((t) => t.fromMemberId === 'tuan')
       .reduce((s, t) => s + t.amount, 0);
     expect(phaiTra).toBe(-net);
-    expect(phaiTra).toBe(113600);
+    expect(phaiTra).toBe(114000);
+  });
+
+  it('không khoản nào có số lẻ dưới nghìn', () => {
+    expect(out.transfers.every((t) => t.amount % 1000 === 0)).toBe(true);
+    expect(out.rows.every((r) => r.netBalance % 1000 === 0)).toBe(true);
   });
 
   it('mọi khoản đều đối chiếu được với buổi Tuấn thật sự có mặt', () => {

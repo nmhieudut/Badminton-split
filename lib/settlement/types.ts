@@ -59,6 +59,12 @@ export interface SettlementOutput {
   rows: SettlementRow[];
   transfers: Transfer[];
   totalCost: number;
+  /**
+   * How much more the rounded-up shares come to than was actually spent.
+   * Whoever fronted the money is reimbursed this much over; it is surfaced
+   * rather than hidden so the group can see what the rounding costs.
+   */
+  roundingExcess: number;
   totalCourtCost: number;
   totalShuttleCost: number;
   totalOtherCost: number;

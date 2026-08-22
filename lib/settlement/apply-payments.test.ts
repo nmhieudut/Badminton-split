@@ -57,11 +57,11 @@ describe('sửa tiền buổi đánh sau khi mọi người đã chuyển khoả
     const out = applyPayments(sau.transfers, daTraDu, nameOf);
 
     const tuan = noOf('hieu', 'tuan', out);
-    // Sân 60.000 + cầu 4 quả 33.333 = phần Tuấn đã trả theo mức cũ.
-    expect(tuan.paidAmount).toBe(93333);
+    // Sân 60.000 + cầu 4 quả 34.000 = phần Tuấn đã trả theo mức cũ.
+    expect(tuan.paidAmount).toBe(94000);
     // Sân 60.000 + cầu 6 quả 50.000 = phần phải chịu theo mức mới.
     expect(tuan.amount).toBe(110000);
-    expect(tuan.remaining).toBe(16667);
+    expect(tuan.remaining).toBe(16000);
     expect(tuan.isSettled).toBe(false);
     expect(out.orphans).toEqual([]);
   });
@@ -93,7 +93,7 @@ describe('sửa tiền buổi đánh sau khi mọi người đã chuyển khoả
 
 describe('sửa buổi đánh làm khoản nợ đổi sang người khác', () => {
   const ban_dau = calculateSettlement({ members, dailySessions: [buoi()] });
-  const daTra = [{ fromMemberId: 'tuan', toMemberId: 'hieu', amount: 93333 }];
+  const daTra = [{ fromMemberId: 'tuan', toMemberId: 'hieu', amount: 94000 }];
 
   it('đổi người ứng tiền thì tiền đã trả cho người cũ không bị nuốt mất', () => {
     // Hoá ra Ky mới là người ứng tiền sân, không phải Hiếu.
@@ -115,7 +115,7 @@ describe('sửa buổi đánh làm khoản nợ đổi sang người khác', () 
         toMemberId: 'hieu',
         fromMemberName: 'Tuấn',
         toMemberName: 'Hiếu',
-        amount: 93333,
+        amount: 94000,
       },
     ]);
   });
