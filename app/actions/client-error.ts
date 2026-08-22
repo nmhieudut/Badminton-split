@@ -21,6 +21,8 @@ export async function reportClientError(input: {
   digest?: string;
   path: string;
   stack?: string;
+  /** Whether the page had been machine-translated when it fell over. */
+  translated?: boolean;
 }): Promise<void> {
   const clip = (s: string | undefined, n: number) => (s ?? '').slice(0, n);
   const h = await headers();
@@ -32,6 +34,9 @@ export async function reportClientError(input: {
       message: clip(input.message, 500),
       digest: clip(input.digest, 64),
       stack: clip(input.stack, 1500),
+      // A translated page is the usual explanation for a DOM error with no app
+      // frames in its stack, so record it rather than guess again next time.
+      daBiDich: input.translated ?? null,
       userAgent: clip(h.get('user-agent') ?? undefined, 200),
       at: new Date().toISOString(),
     })

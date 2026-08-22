@@ -28,6 +28,7 @@ export default function Error({
       digest: error.digest,
       path: window.location.pathname,
       stack: error.stack,
+      translated: isPageTranslated(),
     }).catch(() => {
       // Reporting must never itself become a second error.
     });
@@ -64,4 +65,25 @@ export default function Error({
       </div>
     </div>
   );
+}
+
+/**
+ * Whether the browser has machine-translated this page.
+ *
+ * Chrome marks the document element when its own translator runs, and every
+ * translator rewrites text into <font> wrappers. Either sign means the DOM was
+ * changed underneath React, which explains a commit-phase error whose stack
+ * contains no application code.
+ */
+function isPageTranslated(): boolean {
+  try {
+    const html = document.documentElement;
+    return (
+      /translated-(ltr|rtl)/.test(html.className) ||
+      html.hasAttribute('_msttexthash') ||
+      document.querySelector('font[_mstmutation], font[style]') !== null
+    );
+  } catch {
+    return false;
+  }
 }
