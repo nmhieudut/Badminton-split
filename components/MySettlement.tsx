@@ -5,6 +5,7 @@ import { Check, RefreshCw, ScanLine, UserRound, MessageSquareText } from 'lucide
 import { recordPayment } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import { buildReminders } from '../lib/settlement/reminder';
+import { CopyFallback } from './CopyFallback';
 import type { ViewSettlementRow, ViewTransfer } from '../lib/view-types';
 import { QrSaveButton } from './QrSaveButton';
 import { ME_COOKIE, ME_COOKIE_DAYS } from '../lib/me-cookie';
@@ -44,6 +45,7 @@ export const MySettlement: React.FC<MySettlementProps> = ({
   };
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [fallbackText, setFallbackText] = useState<string | null>(null);
 
   /**
    * Puts a private reminder on the clipboard — one message per person, naming
@@ -67,7 +69,9 @@ export const MySettlement: React.FC<MySettlementProps> = ({
       setCopiedKey(key);
       setTimeout(() => setCopiedKey(null), 2500);
     } catch {
-      window.prompt('Sao chép tin nhắn này:', text);
+      // Clipboard blocked — show the text in the page rather than in a native
+      // prompt, which blocks everything until it is dismissed.
+      setFallbackText(text);
     }
   };
 
@@ -126,6 +130,15 @@ export const MySettlement: React.FC<MySettlementProps> = ({
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       {error && (
         <p className="bg-rose-50 px-5 py-2.5 text-xs font-semibold text-rose-700">{error}</p>
+      )}
+      {fallbackText && (
+        <div className="px-5 pt-4">
+          <CopyFallback
+            title="Tin nhắn nhắc"
+            text={fallbackText}
+            onClose={() => setFallbackText(null)}
+          />
+        </div>
       )}
       <header className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3">
         <div className="flex min-w-0 items-center gap-2">

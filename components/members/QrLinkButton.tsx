@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { Check, Link2 } from 'lucide-react';
 import { createQrUploadLink } from '../../app/actions/qr-upload';
+import { CopyFallback } from '../CopyFallback';
 
 interface QrLinkButtonProps {
   memberId: string;
@@ -17,6 +18,7 @@ interface QrLinkButtonProps {
  */
 export function QrLinkButton({ memberId, memberName, onError }: QrLinkButtonProps) {
   const [copied, setCopied] = useState(false);
+  const [fallback, setFallback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const send = () => {
@@ -34,14 +36,25 @@ export function QrLinkButton({ memberId, memberName, onError }: QrLinkButtonProp
           setCopied(true);
           setTimeout(() => setCopied(false), 2500);
         } catch {
-          // Clipboard blocked: show the link so it can be copied by hand.
-          window.prompt('Sao chép link này gửi cho ' + memberName, url);
+          // Clipboard blocked — routine when the page is not focused. Show the
+          // text in the page instead of a native prompt, which freezes it.
+          setFallback(message);
         }
       } catch (e) {
         onError(e instanceof Error ? e.message : 'Không tạo được link. Thử lại giúp.');
       }
     });
   };
+
+  if (fallback) {
+    return (
+      <CopyFallback
+        title={`Link cho ${memberName}`}
+        text={fallback}
+        onClose={() => setFallback(null)}
+      />
+    );
+  }
 
   return (
     <button
