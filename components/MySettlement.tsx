@@ -8,7 +8,7 @@ import { buildReminders } from '../lib/settlement/reminder';
 import { CopyFallback } from './CopyFallback';
 import type { ViewSettlementRow, ViewTransfer } from '../lib/view-types';
 import { QrSaveButton } from './QrSaveButton';
-import { ME_COOKIE, ME_COOKIE_DAYS } from '../lib/me-cookie';
+import { clearMeCookie, setMeCookie } from '../lib/me-cookie';
 
 
 interface MySettlementProps {
@@ -35,12 +35,12 @@ export const MySettlement: React.FC<MySettlementProps> = ({
   const [, startTransition] = useTransition();
 
   const pickMe = (id: string) => {
-    document.cookie = `${ME_COOKIE}=${id};path=/;max-age=${ME_COOKIE_DAYS * 86400};samesite=lax`;
+    setMeCookie(id);
     setMeId(id);
   };
 
   const changePerson = () => {
-    document.cookie = `${ME_COOKIE}=;path=/;max-age=0;samesite=lax`;
+    clearMeCookie();
     setMeId(null);
   };
 

@@ -8,10 +8,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Edit3,
   HandCoins,
-  MapPin,
-  ShieldCheck,
   Users, Receipt } from 'lucide-react';
 import type { ViewMonth } from '../lib/view-types';
 import { AuthButton } from './AuthButton';
@@ -25,7 +22,6 @@ interface NavbarProps {
   /** Null when the month has no period yet — navigation still works, editing does not. */
   month: ViewMonth | null;
   monthKeys: string[];
-  memberCount: number;
   /** Number of transfers not yet settled — shown as a badge on the settlement tab. */
   unsettledCount: number;
   /** Email of the signed-in user, null for guests. */
@@ -59,7 +55,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   monthKey,
   month,
   monthKeys,
-  memberCount,
   unsettledCount,
   email,
   name,

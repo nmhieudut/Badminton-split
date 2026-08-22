@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Check, Users, Plus, Minus, Loader2 } from 'lucide-react';
 import type { DailySessionInput } from '../app/actions/daily-sessions';
 import type { SessionDefaults, ViewDailySession, ViewMember } from '../lib/view-types';
@@ -95,31 +95,13 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
   const [attendeeHint, setAttendeeHint] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // When the modal reopens for a different session (or a different date), reload the whole form.
-  useEffect(() => {
-    setDate(initialData?.date ?? defaultDate ?? vnDateStr());
-    setCourtName(pickText(initialData?.courtName, defaults?.courtName));
-    setCourtFeeInput(pickText(initialData?.courtFee, defaults?.courtFee));
-    setCourtPayerId(pickText(initialData?.courtPayerId, defaults?.courtPayerId));
-    setShuttlecockCountInput(
-      pickText(initialData?.shuttlecockCount, defaults?.shuttlecockCount)
-    );
-    setShuttlecockPriceInput(
-      pickText(initialData?.shuttlecockPricePerItem, defaults?.shuttlecockPricePerItem)
-    );
-    setShuttlecockPayerId(pickText(initialData?.shuttlecockPayerId, defaults?.shuttlecockPayerId));
-    setOverrideShuttleTotal(initialData?.shuttlecockTotalFee != null);
-    setShuttleTotalInput(pickText(initialData?.shuttlecockTotalFee));
-    setDrinkFeeInput(pickText(initialData?.drinkFee));
-    setDrinkPayerId(pickText(initialData?.drinkPayerId));
-    setOtherFeeInput(pickText(initialData?.otherFee));
-    setOtherFeePayerId(pickText(initialData?.otherFeePayerId));
-    setAttendeeIds(initialData?.attendeeIds ?? defaults?.attendeeIds ?? members.map((m) => m.id));
-    setNote(initialData?.note ?? '');
-    setErrors({});
-    setAttendeeHint(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData?.id, defaultDate]);
+  /*
+   * There is no effect resetting the form when the modal reopens for a
+   * different session. Every useState above already derives its initial value
+   * from the props, so the parent gives this component a key and React builds a
+   * fresh one — which is the same result without twenty lines that had to be
+   * kept in step with the initialisers by hand.
+   */
 
   const numCourtFee = parseVNDInput(courtFeeInput);
   const shuttlecockCount = Math.max(0, parseInt(shuttlecockCountInput, 10) || 0);

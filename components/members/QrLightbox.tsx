@@ -24,7 +24,7 @@ export const QrLightbox: React.FC<QrLightboxProps> = ({ name, url, onClose }) =>
       </DialogHeader>
 
       <DialogBody className="space-y-3 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        { }
         <img
           src={url}
           alt={`Mã QR của ${name}`}

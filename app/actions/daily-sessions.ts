@@ -50,7 +50,8 @@ export async function saveDailySession(monthKey: string, input: DailySessionInpu
     throw new Error('Buổi đánh phải có ít nhất một người thuộc kỳ này');
   }
 
-  const { id, attendeeIds: _ignored, ...fields } = input;
+  // attendeeIds is written separately below, so it is kept out of `fields`.
+  const { id, attendeeIds: _attendeeIds, ...fields } = input;
 
   await db.transaction(async (tx) => {
     let sessionId = id;

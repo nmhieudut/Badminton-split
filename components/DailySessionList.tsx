@@ -7,7 +7,6 @@ import {
   Copy,
   Edit2,
   Trash2,
-  Users,
   Award,
 } from 'lucide-react';
 import type { ViewDailySession, ViewMember, ViewSettlementRow } from '../lib/view-types';
@@ -185,7 +184,6 @@ export const DailySessionList: React.FC<DailySessionListProps> = ({
             const sTotal = sessionTotal(session);
             const attendees = session.attendeeIds;
             const perPerson = attendees.length > 0 ? sTotal / attendees.length : 0;
-            const courtPayer = members.find((m) => m.id === session.courtPayerId)?.name || 'Chưa rõ';
 
             return (
               <div

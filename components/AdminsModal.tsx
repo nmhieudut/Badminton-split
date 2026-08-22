@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useState, useTransition } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { addAdmin, removeAdmin } from '../app/actions/admins';
 import {
@@ -38,19 +38,9 @@ export function AdminsModal({
   const [error, setError] = useState<string | null>(null);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => setIsMounted(true), []);
 
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', esc);
-    return () => document.removeEventListener('keydown', esc);
-  }, [onClose]);
 
-  if (!isMounted) return null;
 
   const changeRole = (email: string, grant: boolean) => {
     setError(null);

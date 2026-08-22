@@ -91,7 +91,6 @@ export default async function MonthLayout({
         monthKey={monthKey}
         month={data?.month ?? null}
         monthKeys={monthKeys}
-        memberCount={data?.members.length ?? 0}
         unsettledCount={unsettledCount}
         email={user?.email ?? null}
         name={user?.name ?? null}

@@ -56,6 +56,13 @@ export default function Error({
           <RefreshCw className="h-4 w-4" />
           Thử lại
         </button>
+        {/*
+          A plain anchor, not <Link>. This page exists because the React tree
+          fell over; a client-side navigation would carry that broken tree along
+          with it, whereas a full document load rebuilds everything, which is the
+          whole point of the button.
+        */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/"
           className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"

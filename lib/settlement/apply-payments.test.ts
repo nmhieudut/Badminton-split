@@ -92,7 +92,6 @@ describe('sửa tiền buổi đánh sau khi mọi người đã chuyển khoả
 });
 
 describe('sửa buổi đánh làm khoản nợ đổi sang người khác', () => {
-  const ban_dau = calculateSettlement({ members, dailySessions: [buoi()] });
   const daTra = [{ fromMemberId: 'tuan', toMemberId: 'hieu', amount: 94000 }];
 
   it('đổi người ứng tiền thì tiền đã trả cho người cũ không bị nuốt mất', () => {

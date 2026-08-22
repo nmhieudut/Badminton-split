@@ -369,7 +369,7 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                     <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
                       {qrUrl ? (
                         <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          { }
                           <img
                             src={qrUrl}
                             alt={`Mã QR của ${t.toMemberName}`}

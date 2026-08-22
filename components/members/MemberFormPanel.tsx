@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, QrCode, TriangleAlert, Upload, UserCheck, UserPlus } from 'lucide-react';
 import { toCompressedQrFile } from '../../lib/image';
 import type { MemberFormValues, ViewMemberWithQr } from './types';
@@ -29,22 +29,19 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
   const [phone, setPhone] = useState(editingMember?.phone ?? '');
   const [isPermanent, setIsPermanent] = useState(editingMember?.isPermanent ?? true);
   const [qrFile, setQrFile] = useState<File | null>(null);
-  const [qrPreview, setQrPreview] = useState<string | null>(null);
   const [isProcessingQr, setIsProcessingQr] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const keepOpenRef = useRef(false);
   const qrFileInputRef = useRef<HTMLInputElement>(null);
 
-  // A newly picked image is shown via an object URL, which must be revoked to avoid a memory leak.
+  // The preview is derived from the picked file rather than mirrored into
+  // state, so the effect has only one job: revoking the URL, which otherwise
+  // leaks.
+  const qrPreview = useMemo(() => (qrFile ? URL.createObjectURL(qrFile) : null), [qrFile]);
   useEffect(() => {
-    if (!qrFile) {
-      setQrPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(qrFile);
-    setQrPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [qrFile]);
+    if (!qrPreview) return;
+    return () => URL.revokeObjectURL(qrPreview);
+  }, [qrPreview]);
 
   const shownQr = qrPreview ?? editingMember?.qrUrl ?? null;
   const busy = isPending || isProcessingQr;
@@ -154,7 +151,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
 
           {shownQr ? (
             <div className="flex items-center gap-4 rounded-xl border border-indigo-200 bg-white p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              { }
               <img
                 src={shownQr}
                 alt="QR Preview"

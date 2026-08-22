@@ -101,6 +101,9 @@ export const DailySessionsTab: React.FC<DailySessionsTabProps> = ({
 
       {modal && (
         <DailySessionModal
+          // Remount on a different session or date: the form reads its initial
+          // values from these props, so a fresh instance is the reset.
+          key={`${modal.mode}-${modal.session?.id ?? 'moi'}-${modal.mode === 'create' ? modal.defaultDate ?? '' : ''}`}
           members={members}
           initialData={modal.mode === 'create' ? null : modal.session}
           defaults={defaults}

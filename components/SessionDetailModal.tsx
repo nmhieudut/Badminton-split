@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { formatVND } from '../lib/money';
 import type { ViewDailySession, ViewMember } from '../lib/view-types';
 import {
@@ -28,19 +28,9 @@ export function SessionDetailModal({
   members: ViewMember[];
   onClose: () => void;
 }) {
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => setIsMounted(true), []);
 
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', esc);
-    return () => document.removeEventListener('keydown', esc);
-  }, [onClose]);
 
-  if (!isMounted) return null;
 
   const nameOf = (id: string | null) =>
     id ? (members.find((m) => m.id === id)?.name ?? '—') : '—';

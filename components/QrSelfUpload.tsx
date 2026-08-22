@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useTransition } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { CheckCircle2, ImagePlus, Link2Off, TriangleAlert } from 'lucide-react';
 import { uploadQrViaLink } from '../app/actions/qr-upload';
 import { toCompressedQrFile } from '../lib/image';
@@ -15,21 +15,18 @@ type Props =
  */
 export function QrSelfUpload(props: Props) {
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [doneFor, setDoneFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Derived from the file rather than mirrored into state: the effect then has
+  // only one job, releasing the URL, and there is no setState inside it.
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
 
   // Success must win over "invalid". Redeeming the link marks it used, so a
   // refresh of this page after the upload sees a spent token and would
@@ -105,7 +102,7 @@ export function QrSelfUpload(props: Props) {
         className="mt-6 flex w-full max-w-xs flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white p-4 transition-colors hover:border-indigo-400 hover:bg-indigo-50 disabled:opacity-60 cursor-pointer"
       >
         {shown ? (
-          // eslint-disable-next-line @next/next/no-img-element
+           
           <img
             src={shown}
             alt="Ảnh QR"

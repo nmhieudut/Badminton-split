@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useState, useTransition } from 'react';
 import { Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
 import { createCourt, deleteCourt, toggleCourtActive, updateCourt } from '../app/actions/courts';
 import {
@@ -33,19 +33,9 @@ export function CourtsModal({
   const [editFee, setEditFee] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => setIsMounted(true), []);
 
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', esc);
-    return () => document.removeEventListener('keydown', esc);
-  }, [onClose]);
 
-  if (!isMounted) return null;
 
   const run = (fn: () => Promise<void>, onDone?: () => void) => {
     setError(null);
