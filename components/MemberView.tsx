@@ -6,6 +6,7 @@ import {
   addExistingMembersToMonth,
   createMember,
   removeMemberFromMonth,
+  removeMemberQr,
   updateMember,
 } from '../app/actions/members';
 import { formatVND } from '../lib/money';
@@ -46,6 +47,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
 
   const [previewQrMember, setPreviewQrMember] = useState<ViewMemberWithQr | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<ViewMemberWithQr | null>(null);
+  const [qrToRemove, setQrToRemove] = useState<ViewMemberWithQr | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
@@ -136,6 +138,13 @@ export const MemberView: React.FC<MemberViewProps> = ({
     run(
       () => addExistingMembersToMonth(monthKey, memberIds),
       () => goToList()
+    );
+  };
+
+  const handleRemoveQr = (memberId: string) => {
+    run(
+      () => removeMemberQr(monthKey, memberId),
+      () => setQrToRemove(null)
     );
   };
 
@@ -362,6 +371,9 @@ export const MemberView: React.FC<MemberViewProps> = ({
         <MemberFormPanel
           key={formKey}
           editingMember={editingMember}
+          onRemoveQr={
+            editingMember?.qrUrl ? () => setQrToRemove(editingMember) : undefined
+          }
           isPending={isPending}
           errorMessage={errorMessage}
           onCancel={goToList}
@@ -385,6 +397,30 @@ export const MemberView: React.FC<MemberViewProps> = ({
           name={previewQrMember.name}
           url={previewQrMember.qrUrl}
           onClose={() => setPreviewQrMember(null)}
+        />
+      )}
+
+      {/*
+        Deleting a QR image is worth a confirmation: it is the only way the
+        group can send this person money, so losing it silently would stop them
+        being paid without anyone noticing why.
+      */}
+      {qrToRemove && (
+        <ConfirmDialog
+          isOpen
+          type="danger"
+          title={`Xoá ảnh QR của "${qrToRemove.name}"?`}
+          message={
+            <span>
+              Sau khi xoá, cả nhóm <strong className="text-slate-900">không chuyển tiền được</strong>{' '}
+              cho {qrToRemove.name} qua app cho tới khi có ảnh QR mới. Ảnh cũ không khôi phục
+              được.
+            </span>
+          }
+          confirmText={isPending ? 'Đang xoá...' : 'Xoá ảnh QR'}
+          cancelText="Giữ lại"
+          onConfirm={() => handleRemoveQr(qrToRemove.id)}
+          onCancel={() => setQrToRemove(null)}
         />
       )}
 

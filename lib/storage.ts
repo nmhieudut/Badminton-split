@@ -30,6 +30,22 @@ export async function uploadQrFromFile(memberId: string, file: File): Promise<st
 }
 
 /**
+ * Remove somebody's QR image from Storage.
+ *
+ * Failing to delete the file is not treated as an error: the record pointing at
+ * it is cleared either way, so a leftover object in the bucket is unreachable
+ * rather than harmful. Refusing to clear the column because the file could not
+ * be removed would leave the member stuck with a QR they asked to be rid of.
+ */
+export async function deleteQrFile(path: string): Promise<void> {
+  try {
+    await admin().storage.from(BUCKET).remove([path]);
+  } catch {
+    // Left in the bucket, no longer referenced by anything.
+  }
+}
+
+/**
  * The bucket is kept private, so there is no public URL. Every member is meant
  * to be able to see everyone else's QR code — the point is that anyone can pay
  * anyone without having to ask for their details first — so this function does

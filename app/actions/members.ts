@@ -11,7 +11,7 @@ import {
   months,
   sessionAttendees,
 } from '../../db/schema';
-import { uploadQrFromFile } from '../../lib/storage';
+import { deleteQrFile, uploadQrFromFile } from '../../lib/storage';
 
 export interface MemberInput {
   name: string;
@@ -140,6 +140,31 @@ export async function addExistingMembersToMonth(monthKey: string, memberIds: str
     .insert(monthMembers)
     .values(ids.map((memberId) => ({ monthId: month.id, memberId })))
     .onConflictDoNothing();
+
+  revalidatePath(`/${monthKey}`, 'layout');
+}
+
+/**
+ * Remove somebody's QR image.
+ *
+ * The record is cleared and the file dropped from Storage. Nobody in the group
+ * can transfer money to a member without one, so this is destructive in a way
+ * that is not obvious from the button — the caller confirms it first.
+ */
+export async function removeMemberQr(monthKey: string, memberId: string) {
+  await requireAdmin();
+
+  const [member] = await db
+    .select({ qrImagePath: members.qrImagePath })
+    .from(members)
+    .where(eq(members.id, memberId))
+    .limit(1);
+
+  if (!member) throw new Error('Không tìm thấy thành viên');
+  if (!member.qrImagePath) throw new Error('Thành viên này chưa có ảnh QR');
+
+  await db.update(members).set({ qrImagePath: null }).where(eq(members.id, memberId));
+  await deleteQrFile(member.qrImagePath);
 
   revalidatePath(`/${monthKey}`, 'layout');
 }

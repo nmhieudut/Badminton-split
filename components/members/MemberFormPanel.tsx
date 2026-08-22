@@ -19,6 +19,8 @@ async function toCompressedFile(file: File): Promise<File> {
 interface MemberFormPanelProps {
   /** A value means we are editing; null means adding a new member. */
   editingMember: ViewMemberWithQr | null;
+  /** Deletes the QR already on file. Absent when there is nothing to delete. */
+  onRemoveQr?: () => void;
   isPending: boolean;
   errorMessage: string | null;
   onCancel: () => void;
@@ -28,6 +30,7 @@ interface MemberFormPanelProps {
 
 export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
   editingMember,
+  onRemoveQr,
   isPending,
   errorMessage,
   onCancel,
@@ -181,7 +184,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
                   >
                     Đổi ảnh
                   </button>
-                  {qrFile && (
+                  {qrFile ? (
                     <button
                       type="button"
                       onClick={() => setQrFile(null)}
@@ -190,6 +193,19 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
                     >
                       Bỏ ảnh vừa chọn
                     </button>
+                  ) : (
+                    /* Deletes the stored image, unlike the button above, which
+                       only discards a file picked but not yet saved. */
+                    onRemoveQr && (
+                      <button
+                        type="button"
+                        onClick={onRemoveQr}
+                        disabled={busy}
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Xoá ảnh QR
+                      </button>
+                    )
                   )}
                 </div>
               </div>
