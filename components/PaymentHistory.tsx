@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { ArrowRight, Receipt, Trash2, TriangleAlert } from 'lucide-react';
 import { deletePayment } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
+import { formatVnDateTime } from '../lib/vn-time';
 import type { PaymentRow } from '../lib/view-types';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -89,7 +90,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({
                     <span className="font-bold text-slate-900">{p.toName}</span>
                   </p>
                   <p className="tabular mt-0.5 font-mono text-[11px] text-slate-400">
-                    {formatDateTime(p.paidAt)}
+                    {formatVnDateTime(p.paidAt)}
                   </p>
                 </div>
 
@@ -136,13 +137,3 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({
     </div>
   );
 };
-
-/**
- * Formatted by hand rather than with toLocaleString: Node and the browser ship
- * different locale data, and the mismatch tears the tree down on hydration.
- */
-function formatDateTime(value: Date | string): string {
-  const d = value instanceof Date ? value : new Date(value);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}

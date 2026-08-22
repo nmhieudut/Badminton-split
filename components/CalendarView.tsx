@@ -4,6 +4,7 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import type { ViewDailySession, ViewMember } from '../lib/view-types';
 import { formatVND } from '../lib/money';
+import { vnDateStr, vnParts } from '../lib/vn-time';
 
 interface CalendarViewProps {
   monthKey: string; // '2026-08'
@@ -52,16 +53,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   // The month being viewed comes from the URL — no state, no navigation in here.
   const [yearRaw, monthRaw] = monthKey.split('-').map(Number);
-  const now = new Date();
-  const year = Number.isFinite(yearRaw) ? yearRaw : now.getFullYear();
-  const month = Number.isFinite(monthRaw) ? monthRaw - 1 : now.getMonth(); // 0-11
+  // Falls back to the current period in Vietnam time, so an unparsable key
+  // does not land on a different month depending on where the machine is.
+  const nowVn = vnParts(new Date());
+  const year = Number.isFinite(yearRaw) ? yearRaw : nowVn.year;
+  const month = Number.isFinite(monthRaw) ? monthRaw - 1 : nowVn.month - 1; // 0-11
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeekRaw = new Date(year, month, 1).getDay();
   // Monday = 0, Tuesday = 1, ..., Sunday = 6
   const startDayOffset = (firstDayOfWeekRaw + 6) % 7;
 
-  const todayStr = toDateStr(now.getFullYear(), now.getMonth(), now.getDate());
+  // Read in Vietnam time, not the machine's. The server renders in UTC and the
+  // browser in the viewer's zone, so for seven hours of every day the two
+  // disagreed about which cell is today — the server would send one highlight
+  // and the browser would draw another over it.
+  const todayStr = vnDateStr();
 
   // Group sessions by date string: 'YYYY-MM-DD'
   const sessionsByDate: Record<string, ViewDailySession[]> = {};

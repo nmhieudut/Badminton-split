@@ -5,6 +5,7 @@ import { Check, Users, Plus, Minus, Loader2 } from 'lucide-react';
 import type { DailySessionInput } from '../app/actions/daily-sessions';
 import type { SessionDefaults, ViewDailySession, ViewMember } from '../lib/view-types';
 import { formatVND, parseVNDInput } from '../lib/money';
+import { vnDateStr } from '../lib/vn-time';
 import {
   Dialog,
   DialogContent,
@@ -44,7 +45,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
   onSave,
   onClose,
 }) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = vnDateStr();
 
   const [date, setDate] = useState<string>(initialData?.date ?? defaultDate ?? today);
   const [courtName, setCourtName] = useState<string>(
@@ -96,7 +97,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
 
   // When the modal reopens for a different session (or a different date), reload the whole form.
   useEffect(() => {
-    setDate(initialData?.date ?? defaultDate ?? new Date().toISOString().split('T')[0]);
+    setDate(initialData?.date ?? defaultDate ?? vnDateStr());
     setCourtName(pickText(initialData?.courtName, defaults?.courtName));
     setCourtFeeInput(pickText(initialData?.courtFee, defaults?.courtFee));
     setCourtPayerId(pickText(initialData?.courtPayerId, defaults?.courtPayerId));
@@ -188,7 +189,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
 
     const input: DailySessionInput = {
       ...(initialData ? { id: initialData.id } : {}),
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || vnDateStr(),
       courtName: courtName.trim(),
       courtFee: numCourtFee,
       courtPayerId: courtPayerId || null,

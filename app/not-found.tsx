@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Search } from 'lucide-react';
+import { vnParts } from '../lib/vn-time';
 
 /*
  * Reached by a mistyped or stale URL. A month with no data does not come here —
@@ -7,8 +8,10 @@ import { ArrowRight, Search } from 'lucide-react';
  * address itself is wrong and simply point back to the current period.
  */
 export default function NotFound() {
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  // The period in Vietnam time: just after midnight there, UTC is still on the
+  // previous day and on the first of a month that means the previous period.
+  const now = vnParts(new Date());
+  const monthKey = `${now.year}-${String(now.month).padStart(2, '0')}`;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
@@ -33,7 +36,7 @@ export default function NotFound() {
         href={{ pathname: `/${monthKey}` }}
         className="mt-7 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
       >
-        Về kỳ tháng {String(now.getMonth() + 1).padStart(2, '0')}/{now.getFullYear()}
+        Về kỳ tháng {String(now.month).padStart(2, '0')}/{now.year}
         <ArrowRight className="h-4 w-4" />
       </Link>
     </main>

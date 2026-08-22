@@ -5,6 +5,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, PlusCircle, Loader2 } from 'lucide-react';
 import { createMonth } from '../app/actions/months';
+import { vnParts } from '../lib/vn-time';
 import { isNavigationError, errorMessage } from '../lib/navigation-error';
 import {
   Dialog,
@@ -46,12 +47,12 @@ export const YearMonthPickerModal: React.FC<YearMonthPickerModalProps> = ({
 
   const [activeYearStr] = currentMonthKey.split('-');
   const [selectedYear, setSelectedYear] = useState<number>(
-    parseInt(activeYearStr, 10) || new Date().getFullYear()
+    parseInt(activeYearStr, 10) || vnParts(new Date()).year
   );
 
-  const realToday = new Date();
-  const realYear = realToday.getFullYear();
-  const realMonth = realToday.getMonth() + 1;
+  const realToday = vnParts(new Date());
+  const realYear = realToday.year;
+  const realMonth = realToday.month;
   const realTodayKey = `${realYear}-${String(realMonth).padStart(2, '0')}`;
 
   const existing = new Set(existingMonthKeys);
