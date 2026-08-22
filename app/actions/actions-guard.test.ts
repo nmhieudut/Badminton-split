@@ -30,6 +30,10 @@ const PUBLIC_ACTIONS = new Map<string, string>([
     'settlement.ts → undoLastPayment',
     'Hoàn tác cú bấm nhầm của chính người vừa ghi; họ thường không phải admin, bắt đi nhờ người khác gỡ còn tệ hơn rủi ro.',
   ],
+  [
+    'qr-upload.ts → uploadQrViaLink',
+    'Thành viên tự tải QR qua link mà không cần tài khoản. Quyền nằm ở chính token: không đoán được, gắn một người, có hạn, dùng một lần.',
+  ],
 ]);
 
 /**

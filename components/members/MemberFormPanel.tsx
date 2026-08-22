@@ -2,19 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, QrCode, TriangleAlert, Upload, UserCheck, UserPlus } from 'lucide-react';
-import { compressImageFile } from '../../lib/image';
+import { toCompressedQrFile } from '../../lib/image';
 import type { MemberFormValues, ViewMemberWithQr } from './types';
-
-/**
- * Compresses the image in the browser and rewraps it as a File so the Server
- * Action can push it straight to Storage — QR screenshots are usually 2-4MB, and
- * sending the original is very slow.
- */
-async function toCompressedFile(file: File): Promise<File> {
-  const dataUrl = await compressImageFile(file, 600, 0.85);
-  const blob = await (await fetch(dataUrl)).blob();
-  return new File([blob], 'qr.jpg', { type: 'image/jpeg' });
-}
 
 interface MemberFormPanelProps {
   /** A value means we are editing; null means adding a new member. */
@@ -64,7 +53,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
     setIsProcessingQr(true);
     setQrError(null);
     try {
-      setQrFile(await toCompressedFile(file));
+      setQrFile(await toCompressedQrFile(file));
     } catch (err) {
       setQrError(err instanceof Error ? err.message : 'Không thể xử lý ảnh QR này');
     } finally {

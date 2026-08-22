@@ -142,3 +142,24 @@ export const courts = pgTable('courts', {
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * One-off links that let a member upload their own QR image without signing in.
+ *
+ * Only a hash of the token is stored: the link itself is the secret, and a
+ * leaked table must not be enough to use one. A link is bound to one member,
+ * expires, and is spent on first successful upload.
+ */
+export const qrUploadTokens = pgTable(
+  'qr_upload_tokens',
+  {
+    tokenHash: text('token_hash').primaryKey(),
+    memberId: uuid('member_id')
+      .notNull()
+      .references(() => members.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('qr_upload_tokens_member_idx').on(t.memberId)]
+);

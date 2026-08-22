@@ -5,6 +5,7 @@ import { Edit2, QrCode, Trash2 } from 'lucide-react';
 import { getMemberColor } from '../../lib/categories';
 import { formatVND } from '../../lib/money';
 import type { ViewMemberWithQr, ViewSettlementRow } from './types';
+import { QrLinkButton } from './QrLinkButton';
 
 interface MemberCardProps {
   member: ViewMemberWithQr;
@@ -15,6 +16,8 @@ interface MemberCardProps {
   onEdit: () => void;
   onRemove: () => void;
   onPreviewQr: () => void;
+  /** Surfaces a failure from a nested action in the card's parent error slot. */
+  onError: (message: string) => void;
   /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
 }
@@ -28,6 +31,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
   onEdit,
   onRemove,
   onPreviewQr,
+  onError,
   isAdmin,
 }) => {
   const attendedCount = row?.sessionsAttendedCount ?? 0;
@@ -121,6 +125,11 @@ export const MemberCard: React.FC<MemberCardProps> = ({
 
         {isAdmin && (
           <>
+            {/* The admin can still upload on someone's behalf, but the normal
+                path is to let the person do it themselves. */}
+            {!member.qrUrl && (
+              <QrLinkButton memberId={member.id} memberName={member.name} onError={onError} />
+            )}
             <button
               type="button"
               onClick={onEdit}
@@ -128,7 +137,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
               className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-slate-900 hover:underline cursor-pointer disabled:opacity-50"
             >
               <Edit2 className="h-3 w-3" />
-              {member.qrUrl ? 'Sửa' : 'Tải QR lên'}
+              Sửa
             </button>
             <button
               type="button"

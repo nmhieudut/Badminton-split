@@ -59,3 +59,14 @@ export async function compressImageFile(
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Compresses the image in the browser and rewraps it as a File so a Server
+ * Action can push it straight to Storage — QR screenshots are usually 2-4MB,
+ * and sending the original is very slow.
+ */
+export async function toCompressedQrFile(file: File): Promise<File> {
+  const dataUrl = await compressImageFile(file, 600, 0.85);
+  const blob = await (await fetch(dataUrl)).blob();
+  return new File([blob], 'qr.jpg', { type: 'image/jpeg' });
+}

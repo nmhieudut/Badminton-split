@@ -359,6 +359,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
                   onEdit={() => handleStartEdit(m)}
                   onRemove={() => handleRequestRemove(m)}
                   onPreviewQr={() => setPreviewQrMember(m)}
+                  onError={setErrorMessage}
                   isAdmin={isAdmin}
                 />
               ))}
