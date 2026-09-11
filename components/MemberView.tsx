@@ -17,6 +17,7 @@ import { MemberFormPanel } from './members/MemberFormPanel';
 import { RosterPickerPanel } from './members/RosterPickerPanel';
 import { QrLightbox } from './members/QrLightbox';
 import type { MemberFilter, MemberFormValues, RosterEntry } from './members/types';
+import { NO_AUTOFILL } from '../lib/no-autofill';
 
 interface MemberViewProps {
   monthKey: string;
@@ -268,7 +269,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                <input
+                <input {...NO_AUTOFILL}
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}

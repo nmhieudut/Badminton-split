@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { reportClientError } from './actions/client-error';
+import { claimAutoRetry, isForeignDomError } from '../lib/foreign-dom-error';
 
 /**
  * The last safety net.
@@ -20,6 +21,16 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A DOM error from React's commit phase — "insertBefore" or "removeChild"
+    // on a node that is no longer a child — means something outside React moved
+    // nodes it owns, usually a browser extension. It is not a broken app state:
+    // rendering the segment again from scratch recovers. Retry once on its own
+    // rather than leaving the person on this screen, but only once per half
+    // minute so a page that keeps failing cannot loop.
+    if (isForeignDomError(error) && claimAutoRetry(safeSessionStorage())) {
+      reset();
+      return;
+    }
     console.error('[trang lỗi]', error.message, error.digest ?? '');
     // Also to the server log, where an operator can actually read it — a
     // browser console on someone else's phone is not something anyone sees.
@@ -32,7 +43,7 @@ export default function Error({
     }).catch(() => {
       // Reporting must never itself become a second error.
     });
-  }, [error]);
+  }, [error, reset]);
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 text-center">
@@ -92,5 +103,13 @@ function isPageTranslated(): boolean {
     );
   } catch {
     return false;
+  }
+}
+
+function safeSessionStorage(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
   }
 }

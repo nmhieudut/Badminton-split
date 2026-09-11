@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Check, QrCode, Search, TriangleAlert, UserPlus, Users } from 'lucide-react';
 import type { RosterEntry } from './types';
+import { NO_AUTOFILL } from '../../lib/no-autofill';
 
 interface RosterPickerPanelProps {
   roster: RosterEntry[];
@@ -108,7 +109,7 @@ export const RosterPickerPanel: React.FC<RosterPickerPanelProps> = ({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              <input
+              <input {...NO_AUTOFILL}
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

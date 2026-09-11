@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, QrCode, TriangleAlert, Upload, UserCheck, UserPlus } from 'lucide-react';
 import { toCompressedQrFile } from '../../lib/image';
 import type { MemberFormValues, ViewMemberWithQr } from './types';
+import { NO_AUTOFILL } from '../../lib/no-autofill';
 
 interface MemberFormPanelProps {
   /** A value means we are editing; null means adding a new member. */
@@ -91,7 +92,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
               Tên thành viên <span className="text-red-500">*</span>
             </label>
-            <input
+            <input {...NO_AUTOFILL}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -106,7 +107,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
               Số điện thoại / Zalo
             </label>
-            <input
+            <input {...NO_AUTOFILL}
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -135,7 +136,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
             chuyển tiền cho bạn qua app được.
           </p>
 
-          <input
+          <input {...NO_AUTOFILL}
             ref={qrFileInputRef}
             type="file"
             accept="image/*"
@@ -225,7 +226,7 @@ export const MemberFormPanel: React.FC<MemberFormPanelProps> = ({
               Tự động mặc định tích đi sân khi tạo buổi đánh mới
             </span>
           </div>
-          <input
+          <input {...NO_AUTOFILL}
             type="checkbox"
             checked={isPermanent}
             onChange={(e) => setIsPermanent(e.target.checked)}
