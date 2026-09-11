@@ -19,6 +19,7 @@ import { ROUNDING_THRESHOLD } from '../lib/settlement/calculate';
 import type { ViewSettlement, ViewTransfer } from '../lib/view-types';
 import { MySettlement } from './MySettlement';
 import { QrSaveButton } from './QrSaveButton';
+import { QrZoomImage } from './QrZoomImage';
 import { ZaloReportModal } from './ZaloReportModal';
 
 interface SettlementViewProps {
@@ -370,11 +371,13 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                       {qrUrl ? (
                         <>
                           { }
-                          <img
-                            src={qrUrl}
-                            alt={`Mã QR của ${t.toMemberName}`}
-                            className="mx-auto h-auto w-full max-w-[220px] rounded-lg bg-white object-contain shadow-2xs"
-                          />
+                          <div className="mx-auto max-w-[220px]">
+                            <QrZoomImage
+                              src={qrUrl}
+                              alt={`Mã QR của ${t.toMemberName}`}
+                              className="h-auto w-full rounded-lg bg-white object-contain shadow-2xs"
+                            />
+                          </div>
                           <p className="mt-2 text-center text-[11px] text-slate-400">
                             Quét để chuyển {formatVND(t.remaining)} cho {t.toMemberName}
                           </p>

@@ -8,6 +8,7 @@ import { buildReminders } from '../lib/settlement/reminder';
 import { CopyFallback } from './CopyFallback';
 import type { ViewSettlementRow, ViewTransfer } from '../lib/view-types';
 import { QrSaveButton } from './QrSaveButton';
+import { QrZoomImage } from './QrZoomImage';
 import { clearMeCookie, setMeCookie } from '../lib/me-cookie';
 
 
@@ -185,11 +186,13 @@ export const MySettlement: React.FC<MySettlementProps> = ({
 
                 {qr ? (
                   <figure className="mt-4">
-                    <img
-                      src={qr}
-                      alt={`Mã QR nhận tiền của ${t.toMemberName}`}
-                      className="h-56 w-56 rounded-xl border border-slate-200 bg-white object-contain p-2"
-                    />
+                    <div className="w-56">
+                      <QrZoomImage
+                        src={qr}
+                        alt={`Mã QR nhận tiền của ${t.toMemberName}`}
+                        className="h-56 w-56 rounded-xl border border-slate-200 bg-white object-contain p-2"
+                      />
+                    </div>
                     <figcaption className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500">
                       <ScanLine className="h-3.5 w-3.5" />
                       Mở app ngân hàng và quét mã này

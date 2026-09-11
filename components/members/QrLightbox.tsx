@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { QrSaveButton } from '../QrSaveButton';
+import { QrZoomImage } from '../QrZoomImage';
 import {
   Dialog,
   DialogBody,
@@ -24,8 +25,7 @@ export const QrLightbox: React.FC<QrLightboxProps> = ({ name, url, onClose }) =>
       </DialogHeader>
 
       <DialogBody className="space-y-3 text-center">
-        { }
-        <img
+        <QrZoomImage
           src={url}
           alt={`Mã QR của ${name}`}
           className="mx-auto max-h-72 w-full rounded-xl border border-slate-200 bg-white object-contain p-2"
