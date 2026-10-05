@@ -2,5 +2,13 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "outputDirectory": ".next",
-  "regions": ["icn1"]
+  "regions": [
+    "icn1"
+  ],
+  "crons": [
+    {
+      "path": "/api/keep-alive",
+      "schedule": "0 3 */3 * *"
+    }
+  ]
 }
