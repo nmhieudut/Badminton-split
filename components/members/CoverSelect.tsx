@@ -12,7 +12,7 @@ interface CoverSelectProps {
   /** Everyone on the roster: a coverer does not have to play this period. */
   roster: RosterEntry[];
   /** This period's covers. */
-  covers: { memberId: string; coveredById: string }[];
+  covers: { memberId: string; coveredById: string; recurring: boolean }[];
   onError: (message: string) => void;
 }
 
@@ -26,7 +26,9 @@ export const CoverSelect: React.FC<CoverSelectProps> = ({
 }) => {
   const [isPending, startTransition] = useTransition();
 
-  const current = covers.find((c) => c.memberId === memberId)?.coveredById ?? '';
+  const mine = covers.find((c) => c.memberId === memberId);
+  const current = mine?.coveredById ?? '';
+  const recurring = mine?.recurring ?? true;
   const coversSomeone = covers.some((c) => c.coveredById === memberId);
   const covered = new Set(covers.map((c) => c.memberId));
 
@@ -48,11 +50,10 @@ export const CoverSelect: React.FC<CoverSelectProps> = ({
     );
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = e.target.value || null;
+  const save = (coveredById: string | null, nextRecurring: boolean) => {
     startTransition(async () => {
       try {
-        await setMemberCover(monthKey, memberId, next);
+        await setMemberCover(monthKey, memberId, coveredById, nextRecurring);
       } catch (err) {
         onError(err instanceof Error ? err.message : 'Không lưu được người trả giúp');
       }
@@ -60,23 +61,40 @@ export const CoverSelect: React.FC<CoverSelectProps> = ({
   };
 
   return (
-    <label className="flex w-full items-center gap-2 text-xs">
-      <HandCoins className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-      <span className="shrink-0 text-slate-500">Ai trả giúp?</span>
-      <select
-        {...NO_AUTOFILL}
-        value={current}
-        onChange={handleChange}
-        disabled={isPending}
-        className="min-w-0 flex-1 truncate rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:opacity-50 cursor-pointer"
-      >
-        <option value="">Tự trả</option>
-        {options.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="space-y-1.5">
+      <label className="flex w-full items-center gap-2 text-xs">
+        <HandCoins className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+        <span className="shrink-0 text-slate-500">Ai trả giúp?</span>
+        <select
+          {...NO_AUTOFILL}
+          value={current}
+          onChange={(e) => save(e.target.value || null, recurring)}
+          disabled={isPending}
+          className="min-w-0 flex-1 truncate rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:opacity-50 cursor-pointer"
+        >
+          <option value="">Tự trả</option>
+          {options.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {/* Someone short of money once is covered for this period only; the
+          next period they pay for themselves without the admin undoing it. */}
+      {current && (
+        <label className="flex items-center gap-2 pl-5.5 text-xs text-slate-500 cursor-pointer">
+          <input
+            {...NO_AUTOFILL}
+            type="checkbox"
+            checked={recurring}
+            onChange={(e) => save(current, e.target.checked)}
+            disabled={isPending}
+            className="h-3.5 w-3.5 accent-indigo-600"
+          />
+          Các kỳ sau cũng vậy
+        </label>
+      )}
+    </div>
   );
 };

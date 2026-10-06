@@ -1,7 +1,7 @@
-import { and, desc, eq, inArray, isNotNull, lt } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lt } from 'drizzle-orm';
 import { db } from './index';
 import { members, monthMembers, months } from './schema';
-import { acceptInheritedCovers } from '../lib/settlement/validate-cover';
+import { acceptInheritedCovers, pickInheritedCovers } from '../lib/settlement/validate-cover';
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -22,6 +22,7 @@ export async function coversOfMonth(ex: Executor, monthId: string) {
       coveredById: monthMembers.coveredById,
       coveredByName: members.name,
       coveredByQrPath: members.qrImagePath,
+      recurring: monthMembers.coverRecurring,
     })
     .from(monthMembers)
     .innerJoin(members, eq(members.id, monthMembers.coveredById))
@@ -32,7 +33,8 @@ export async function coversOfMonth(ex: Executor, monthId: string) {
 /**
  * Carry each newly added member's cover over from the latest earlier period
  * they were in, so a pair set up once keeps applying without the admin
- * redoing it every period. A cover turned off in that period stays off.
+ * redoing it every period. A cover turned off in that period, or set for
+ * that period only, does not carry over.
  */
 export async function inheritCovers(
   ex: Executor,
@@ -42,25 +44,24 @@ export async function inheritCovers(
   if (newMemberIds.length === 0) return;
 
   const history = await ex
-    .select({ memberId: monthMembers.memberId, coveredById: monthMembers.coveredById })
+    .select({
+      memberId: monthMembers.memberId,
+      coveredById: monthMembers.coveredById,
+      recurring: monthMembers.coverRecurring,
+      monthKey: months.monthKey,
+    })
     .from(monthMembers)
     .innerJoin(months, eq(months.id, monthMembers.monthId))
-    .where(and(inArray(monthMembers.memberId, newMemberIds), lt(months.monthKey, month.monthKey)))
-    .orderBy(desc(months.monthKey));
+    .where(and(inArray(monthMembers.memberId, newMemberIds), lt(months.monthKey, month.monthKey)));
 
-  const latest = new Map<string, string | null>();
-  for (const r of history) if (!latest.has(r.memberId)) latest.set(r.memberId, r.coveredById);
-
-  const inherited = new Map(
-    [...latest].filter((e): e is [string, string] => e[1] !== null)
-  );
+  const inherited = pickInheritedCovers(history);
   if (inherited.size === 0) return;
 
   const accepted = acceptInheritedCovers(await coverMapOfMonth(ex, month.id), inherited);
   for (const [memberId, coveredById] of accepted) {
     await ex
       .update(monthMembers)
-      .set({ coveredById })
+      .set({ coveredById, coverRecurring: true })
       .where(and(eq(monthMembers.monthId, month.id), eq(monthMembers.memberId, memberId)));
   }
 }

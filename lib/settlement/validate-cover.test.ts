@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acceptInheritedCovers, validateCover } from './validate-cover';
+import { acceptInheritedCovers, pickInheritedCovers, validateCover } from './validate-cover';
 
 describe('validateCover', () => {
   const current = new Map([['h', 's']]); // Sang covers Hiền
@@ -54,5 +54,40 @@ describe('acceptInheritedCovers', () => {
 
   it('bỏ cặp tự trả giúp mình', () => {
     expect(acceptInheritedCovers(new Map(), new Map([['h', 'h']]))).toEqual(new Map());
+  });
+});
+
+describe('pickInheritedCovers', () => {
+  it('lấy cặp ở kỳ gần nhất của từng người, chỉ khi được đánh dấu lặp lại', () => {
+    const picked = pickInheritedCovers([
+      { memberId: 'h', coveredById: 's', recurring: true, monthKey: '2026-09' },
+      { memberId: 'h', coveredById: 'x', recurring: true, monthKey: '2026-08' },
+      { memberId: 'd', coveredById: 'l', recurring: false, monthKey: '2026-09' },
+    ]);
+    expect(picked).toEqual(new Map([['h', 's']]));
+  });
+
+  it('trả giúp chỉ kỳ này thì kỳ sau người đó tự trả, kể cả khi kỳ trước nữa có cài lặp lại', () => {
+    const picked = pickInheritedCovers([
+      { memberId: 'd', coveredById: 'l', recurring: false, monthKey: '2026-09' },
+      { memberId: 'd', coveredById: 'l', recurring: true, monthKey: '2026-08' },
+    ]);
+    expect(picked).toEqual(new Map());
+  });
+
+  it('kỳ gần nhất đã bỏ trả giúp thì không chép', () => {
+    const picked = pickInheritedCovers([
+      { memberId: 'h', coveredById: null, recurring: true, monthKey: '2026-09' },
+      { memberId: 'h', coveredById: 's', recurring: true, monthKey: '2026-08' },
+    ]);
+    expect(picked).toEqual(new Map());
+  });
+
+  it('không phụ thuộc thứ tự dòng đầu vào', () => {
+    const picked = pickInheritedCovers([
+      { memberId: 'h', coveredById: 'x', recurring: true, monthKey: '2026-08' },
+      { memberId: 'h', coveredById: 's', recurring: true, monthKey: '2026-09' },
+    ]);
+    expect(picked).toEqual(new Map([['h', 's']]));
   });
 });

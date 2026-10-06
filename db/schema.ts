@@ -41,6 +41,8 @@ export const monthMembers = pgTable(
       .references(() => members.id, { onDelete: 'cascade' }),
     /** Someone from the roster who pays and receives for this member in this period. */
     coveredById: uuid('covered_by_id').references(() => members.id, { onDelete: 'set null' }),
+    /** False when the cover is for this period only and must not carry over. */
+    coverRecurring: boolean('cover_recurring').notNull().default(true),
   },
   (t) => [primaryKey({ columns: [t.monthId, t.memberId] })]
 );

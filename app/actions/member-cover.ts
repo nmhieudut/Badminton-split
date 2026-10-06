@@ -11,11 +11,13 @@ import { validateCover } from '../../lib/settlement/validate-cover';
 /**
  * Set, change or clear who pays and receives on a member's behalf in one
  * period. The coverer can be anyone on the roster, in the period or not.
+ * `recurring` false means this period only: the next period will not inherit it.
  */
 export async function setMemberCover(
   monthKey: string,
   memberId: string,
-  coveredById: string | null
+  coveredById: string | null,
+  recurring = true
 ) {
   await requireAdmin();
 
@@ -48,7 +50,7 @@ export async function setMemberCover(
 
     await tx
       .update(monthMembers)
-      .set({ coveredById })
+      .set({ coveredById, coverRecurring: coveredById ? recurring : true })
       .where(and(eq(monthMembers.monthId, month.id), eq(monthMembers.memberId, memberId)));
   });
 

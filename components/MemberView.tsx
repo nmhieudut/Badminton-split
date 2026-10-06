@@ -27,7 +27,7 @@ interface MemberViewProps {
   roster: RosterEntry[];
   settlementRows: ViewSettlementRow[];
   /** Who pays on whose behalf in this period. */
-  covers: { memberId: string; coveredById: string }[];
+  covers: { memberId: string; coveredById: string; recurring: boolean }[];
   sessionCount: number;
   /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
@@ -370,6 +370,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
                   onPreviewQr={() => setPreviewQrMember(m)}
                   onError={setErrorMessage}
                   isAdmin={isAdmin}
+                  coverOnlyThisPeriod={covers.some((c) => c.memberId === m.id && !c.recurring)}
                   coverControl={
                     isAdmin ? (
                       <CoverSelect

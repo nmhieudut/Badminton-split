@@ -24,7 +24,11 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
       members={membersWithQr}
       roster={roster}
       settlementRows={data.settlement.rows}
-      covers={data.covers.map(({ memberId, coveredById }) => ({ memberId, coveredById }))}
+      covers={data.covers.map(({ memberId, coveredById, recurring }) => ({
+        memberId,
+        coveredById,
+        recurring,
+      }))}
       sessionCount={data.dailySessions.length}
       isAdmin={isAdmin}
     />

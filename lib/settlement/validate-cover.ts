@@ -41,3 +41,26 @@ export function acceptInheritedCovers(
   }
   return accepted;
 }
+
+/**
+ * Which covers a new period should start with, from each member's history.
+ *
+ * Only a member's latest earlier period counts: if the cover was cleared there,
+ * or set for that period only (someone short of money once), the member pays
+ * for themselves from now on — even if an older period had a recurring cover.
+ */
+export function pickInheritedCovers(
+  history: { memberId: string; coveredById: string | null; recurring: boolean; monthKey: string }[]
+): Map<string, string> {
+  const latest = new Map<string, (typeof history)[number]>();
+  for (const row of history) {
+    const seen = latest.get(row.memberId);
+    if (!seen || row.monthKey > seen.monthKey) latest.set(row.memberId, row);
+  }
+
+  const picked = new Map<string, string>();
+  for (const [memberId, row] of latest) {
+    if (row.coveredById && row.recurring) picked.set(memberId, row.coveredById);
+  }
+  return picked;
+}
