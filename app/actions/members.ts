@@ -12,6 +12,7 @@ import {
   sessionAttendees,
 } from '../../db/schema';
 import { deleteQrFile, uploadQrFromFile } from '../../lib/storage';
+import { inheritCovers } from '../../db/cover-queries';
 
 export interface MemberInput {
   name: string;
@@ -136,10 +137,17 @@ export async function addExistingMembersToMonth(monthKey: string, memberIds: str
   const known = await db.select({ id: members.id }).from(members).where(inArray(members.id, ids));
   if (known.length !== ids.length) throw new Error('Có thành viên không tồn tại');
 
-  await db
-    .insert(monthMembers)
-    .values(ids.map((memberId) => ({ monthId: month.id, memberId })))
-    .onConflictDoNothing();
+  await db.transaction(async (tx) => {
+    const added = await tx
+      .insert(monthMembers)
+      .values(ids.map((memberId) => ({ monthId: month.id, memberId })))
+      .onConflictDoNothing()
+      .returning({ memberId: monthMembers.memberId });
+
+    // Only people who were not already in the period pick up an earlier cover;
+    // anyone already here keeps whatever the admin set for this period.
+    await inheritCovers(tx, month, added.map((r) => r.memberId));
+  });
 
   revalidatePath(`/${monthKey}`, 'layout');
 }

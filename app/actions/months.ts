@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { db } from '../../db';
 import { requireAdmin } from '../../lib/auth/session';
 import { members, monthMembers, months } from '../../db/schema';
+import { inheritCovers } from '../../db/cover-queries';
 
 const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -35,6 +36,7 @@ export async function createMonth(monthKey: string, carryOverPermanent = true) {
         await tx
           .insert(monthMembers)
           .values(permanent.map((p) => ({ monthId: created.id, memberId: p.id })));
+        await inheritCovers(tx, created, permanent.map((p) => p.id));
       }
     }
   });

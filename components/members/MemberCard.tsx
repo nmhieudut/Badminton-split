@@ -20,6 +20,8 @@ interface MemberCardProps {
   onError: (message: string) => void;
   /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
+  /** Admin control for who pays on this member's behalf; omitted for viewers. */
+  coverControl?: React.ReactNode;
 }
 
 export const MemberCard: React.FC<MemberCardProps> = ({
@@ -33,6 +35,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
   onPreviewQr,
   onError,
   isAdmin,
+  coverControl,
 }) => {
   const attendedCount = row?.sessionsAttendedCount ?? 0;
   const netBalance = row?.netBalance ?? 0;
@@ -51,6 +54,11 @@ export const MemberCard: React.FC<MemberCardProps> = ({
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <h4 className="truncate text-sm font-bold text-slate-900">{member.name}</h4>
+            {row?.coveredByName && (
+              <span className="shrink-0 text-[10px] font-bold text-indigo-700">
+                {row.coveredByName} trả giúp
+              </span>
+            )}
             {!member.isPermanent && (
               <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-amber-700">
                 Vãng lai
@@ -102,6 +110,10 @@ export const MemberCard: React.FC<MemberCardProps> = ({
             </dd>
           </div>
         </dl>
+      )}
+
+      {coverControl && (
+        <div className="mt-3 border-t border-slate-100 pt-3">{coverControl}</div>
       )}
 
       {/*

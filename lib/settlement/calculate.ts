@@ -1,4 +1,5 @@
 import { allocate } from './allocate';
+import { buildWallet, type CoverWallet } from './cover-wallet';
 import type {
   SettlementDailySession,
   SettlementInput,
@@ -21,6 +22,7 @@ export const ROUNDING_THRESHOLD = 500;
 
 export function calculateSettlement(input: SettlementInput): SettlementOutput {
   const { members, dailySessions } = input;
+  const wallet = buildWallet(members, input.covers);
 
   const memberIds = new Set(members.map((m) => m.id));
 
@@ -102,6 +104,7 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
     courtShare: courtShare.get(m.id) ?? 0,
     shuttleShare: shuttleShare.get(m.id) ?? 0,
     drinkShare: drinkShare.get(m.id) ?? 0,
+    ...(wallet.coveredByNameOf(m.id) ? { coveredByName: wallet.coveredByNameOf(m.id) } : {}),
   }));
 
   // Shares are rounded up per person, so they come to a little more than was
@@ -111,7 +114,7 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
 
   return {
     rows,
-    transfers: buildTransfers(rows, dailySessions, memberIds),
+    transfers: buildTransfers(dailySessions, memberIds, wallet),
     totalCost,
     roundingExcess: Math.max(0, totalShare - totalCost),
     totalCourtCost,
@@ -136,16 +139,18 @@ export function calculateSettlement(input: SettlementInput): SettlementOutput {
  * only ever involves the two of them, so both can still verify it.
  */
 function buildTransfers(
-  rows: SettlementRow[],
   sessions: SettlementDailySession[],
-  memberIds: Set<string>
+  memberIds: Set<string>,
+  wallet: CoverWallet
 ): Transfer[] {
-  const nameOf = new Map(rows.map((r) => [r.memberId, r.name]));
 
   // debtor -> creditor -> the sessions behind that debt
   const owed = new Map<string, Map<string, TransferLine[]>>();
 
-  const record = (debtor: string, creditor: string, line: TransferLine) => {
+  const record = (from: string, to: string, share: TransferLine) => {
+    // Covered members settle through whoever covers them; a debt that ends up
+    // inside one wallet needs no transfer at all.
+    const { debtor, creditor, line } = wallet.route(from, to, share);
     if (debtor === creditor || line.amount === 0) return;
     const byCreditor = owed.get(debtor) ?? new Map<string, TransferLine[]>();
     byCreditor.set(creditor, [...(byCreditor.get(creditor) ?? []), line]);
@@ -211,9 +216,9 @@ function buildTransfers(
 
       transfers.push({
         fromMemberId: from,
-        fromMemberName: nameOf.get(from) ?? '',
+        fromMemberName: wallet.nameOf(from),
         toMemberId: to,
-        toMemberName: nameOf.get(to) ?? '',
+        toMemberName: wallet.nameOf(to),
         amount: Math.abs(net),
         lines: [
           ...own.map((l) => ({ ...l })),

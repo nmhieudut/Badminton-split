@@ -10,15 +10,25 @@ export default async function Page({ params }: { params: Promise<{ monthKey: str
   const data = await getMonthData(monthKey);
   if (!data) return null;
 
+  // Coverers who did not play this period still receive money, so they need a QR too.
+  const qrOwners = [
+    ...data.members.map((m) => ({ id: m.id, path: m.qrImagePath })),
+    ...data.covers.map((c) => ({ id: c.coveredById, path: c.coveredByQrPath })),
+  ];
+  const uniqueOwners = [...new Map(qrOwners.map((o) => [o.id, o])).values()];
   const qrPairs = await Promise.all(
-    data.members.map(async (m) => [m.id, await getQrSignedUrl(m.qrImagePath)] as const)
+    uniqueOwners.map(async (o) => [o.id, await getQrSignedUrl(o.path)] as const)
   );
 
   // Who is holding the phone. Read on the server so the "my tasks" block is
   // correct on first paint. Ignored if the person in the cookie does not belong
-  // to this period.
+  // to this period, unless they cover someone in it.
   const saved = (await cookies()).get(ME_COOKIE)?.value ?? null;
-  const meId = saved && data.members.some((m) => m.id === saved) ? saved : null;
+  const meId =
+    saved &&
+    (data.members.some((m) => m.id === saved) || data.covers.some((c) => c.coveredById === saved))
+      ? saved
+      : null;
 
 
   const report = generateZaloReport({

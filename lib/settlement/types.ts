@@ -19,9 +19,18 @@ export interface SettlementDailySession {
   attendeeIds: string[];
 }
 
+/** One member of the period whose money is paid and received by someone else. */
+export interface SettlementCover {
+  memberId: string;
+  /** May be someone from the roster who is not in this period. */
+  coveredById: string;
+  coveredByName: string;
+}
+
 export interface SettlementInput {
   members: SettlementMember[];
   dailySessions: SettlementDailySession[];
+  covers?: SettlementCover[];
 }
 
 export interface SettlementRow {
@@ -34,6 +43,8 @@ export interface SettlementRow {
   courtShare: number;
   shuttleShare: number;
   drinkShare: number;
+  /** Set when someone else pays and receives on this member's behalf. */
+  coveredByName?: string;
 }
 
 /** One session's contribution to a debt, so the total can be checked against real events. */

@@ -188,6 +188,11 @@ export const SettlementView: React.FC<SettlementViewProps> = ({
                       {' · đã chi '}
                       {formatVND(r.totalPaid)}
                     </p>
+                    {r.coveredByName && (
+                      <p className="mt-0.5 text-[11px] font-semibold text-indigo-700">
+                        {r.coveredByName} trả giúp
+                      </p>
+                    )}
                   </div>
 
                   <p

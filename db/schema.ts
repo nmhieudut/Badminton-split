@@ -39,6 +39,8 @@ export const monthMembers = pgTable(
     memberId: uuid('member_id')
       .notNull()
       .references(() => members.id, { onDelete: 'cascade' }),
+    /** Someone from the roster who pays and receives for this member in this period. */
+    coveredById: uuid('covered_by_id').references(() => members.id, { onDelete: 'set null' }),
   },
   (t) => [primaryKey({ columns: [t.monthId, t.memberId] })]
 );

@@ -13,6 +13,7 @@ import { formatVND } from '../lib/money';
 import type { ViewMemberWithQr, ViewSettlementRow } from '../lib/view-types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { MemberCard } from './members/MemberCard';
+import { CoverSelect } from './members/CoverSelect';
 import { MemberFormPanel } from './members/MemberFormPanel';
 import { RosterPickerPanel } from './members/RosterPickerPanel';
 import { QrLightbox } from './members/QrLightbox';
@@ -25,6 +26,8 @@ interface MemberViewProps {
   /** Everyone ever created, so people can be reused instead of retyped each period. */
   roster: RosterEntry[];
   settlementRows: ViewSettlementRow[];
+  /** Who pays on whose behalf in this period. */
+  covers: { memberId: string; coveredById: string }[];
   sessionCount: number;
   /** Whether the viewer has write access. The real gate lives in the Server Action. */
   isAdmin: boolean;
@@ -35,6 +38,7 @@ export const MemberView: React.FC<MemberViewProps> = ({
   members,
   roster,
   settlementRows,
+  covers,
   sessionCount,
   isAdmin,
 }) => {
@@ -366,6 +370,17 @@ export const MemberView: React.FC<MemberViewProps> = ({
                   onPreviewQr={() => setPreviewQrMember(m)}
                   onError={setErrorMessage}
                   isAdmin={isAdmin}
+                  coverControl={
+                    isAdmin ? (
+                      <CoverSelect
+                        monthKey={monthKey}
+                        memberId={m.id}
+                        roster={roster}
+                        covers={covers}
+                        onError={setErrorMessage}
+                      />
+                    ) : undefined
+                  }
                 />
               ))}
             </div>

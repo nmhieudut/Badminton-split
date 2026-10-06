@@ -36,6 +36,7 @@ export function generateZaloReport(args: ReportArgs): string {
       sessionCount > 0 ? ` [Có mặt: ${r.sessionsAttendedCount}/${sessionCount} buổi]` : '';
 
     lines.push(`• ${r.name}${attendance}:`);
+    if (r.coveredByName) lines.push(`  - ${r.coveredByName} trả giúp`);
     lines.push(`  - Đã chi trước: ${formatVND(r.totalPaid)}`);
     lines.push(`  - Phần phải chịu: ${formatVND(r.totalShare)}`);
     lines.push(`  ${status}`);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Check, RefreshCw, ScanLine, UserRound, MessageSquareText } from 'lucide-react';
+import { Check, HandCoins, RefreshCw, ScanLine, UserRound, MessageSquareText } from 'lucide-react';
 import { recordPayment } from '../app/actions/settlement';
 import { formatVND } from '../lib/money';
 import { buildReminders } from '../lib/settlement/reminder';
@@ -93,6 +93,22 @@ export const MySettlement: React.FC<MySettlementProps> = ({
     });
   };
 
+  // Someone covering a member can be outside the period (no balance row) yet
+  // still send and receive money, so they must be able to pick themselves too.
+  const outsideCoverers = new Map<string, string>();
+  for (const t of transfers) {
+    for (const [id, name] of [
+      [t.fromMemberId, t.fromMemberName],
+      [t.toMemberId, t.toMemberName],
+    ]) {
+      if (!rows.some((r) => r.memberId === id)) outsideCoverers.set(id, name);
+    }
+  }
+  const people = [
+    ...rows.map((r) => ({ id: r.memberId, name: r.name })),
+    ...[...outsideCoverers].map(([id, name]) => ({ id, name })),
+  ];
+
   if (!meId) {
     return (
       <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
@@ -104,11 +120,11 @@ export const MySettlement: React.FC<MySettlementProps> = ({
           Chọn tên để xem thẳng phần việc của mình. Chỉ cần chọn một lần trên máy này.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {rows.map((r) => (
+          {people.map((r) => (
             <button
-              key={r.memberId}
+              key={r.id}
               type="button"
-              onClick={() => pickMe(r.memberId)}
+              onClick={() => pickMe(r.id)}
               className="rounded-xl border border-indigo-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
               {r.name}
@@ -119,8 +135,15 @@ export const MySettlement: React.FC<MySettlementProps> = ({
     );
   }
 
-  const me = rows.find((r) => r.memberId === meId);
-  if (!me) return null;
+  const row = rows.find((r) => r.memberId === meId);
+  const outsideName = outsideCoverers.get(meId);
+  if (!row && !outsideName) return null;
+  const me = {
+    name: row?.name ?? outsideName!,
+    sessionsAttendedCount: row?.sessionsAttendedCount ?? 0,
+    totalShare: row?.totalShare ?? 0,
+    coveredByName: row?.coveredByName,
+  };
 
   const iOwe = transfers.filter((t) => t.fromMemberId === meId);
   const owedToMe = transfers.filter((t) => t.toMemberId === meId);
@@ -291,7 +314,26 @@ export const MySettlement: React.FC<MySettlementProps> = ({
         </div>
       )}
 
-      {unpaidByMe.length === 0 && unpaidToMe.length === 0 && (
+      {/* Someone else settles for this person, so there is nothing for them to send or chase. */}
+      {me.coveredByName && (
+        <div className="flex items-center gap-3 p-5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
+            <HandCoins className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-bold text-slate-900">{me.coveredByName} trả giúp bạn</p>
+            <p className="text-xs text-slate-500">
+              {me.coveredByName} chuyển và nhận tiền thay bạn kỳ này. Phần của bạn là{' '}
+              <span className="tabular font-mono font-semibold text-slate-700">
+                {formatVND(me.totalShare)}
+              </span>
+              .
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!me.coveredByName && unpaidByMe.length === 0 && unpaidToMe.length === 0 && (
         <div className="flex items-center gap-3 p-5">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <Check className="h-5 w-5" />

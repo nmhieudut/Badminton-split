@@ -13,6 +13,7 @@ import {
 } from './schema';
 import { calculateSettlement } from '../lib/settlement/calculate';
 import { applyPayments } from '../lib/settlement/apply-payments';
+import { coversOfMonth } from './cover-queries';
 
 export async function listMonthKeys(): Promise<string[]> {
   const rows = await db
@@ -61,6 +62,8 @@ export async function getMonthData(monthKey: string) {
 
 
 
+  const covers = await coversOfMonth(db, month.id);
+
   const paymentRows = await db
     .select()
     .from(payments)
@@ -95,9 +98,14 @@ export async function getMonthData(monthKey: string) {
       otherFeePayerId: s.otherFeePayerId,
       attendeeIds: s.attendeeIds,
     })),
+    covers,
   });
 
-  const nameOf = (id: string) => memberRows.find((m) => m.id === id)?.name ?? '';
+  // Coverers outside the period still appear in transfers and payments.
+  const nameOf = (id: string) =>
+    memberRows.find((m) => m.id === id)?.name ??
+    covers.find((c) => c.coveredById === id)?.coveredByName ??
+    '';
 
   // Offsets what has been sent against what is currently owed. The debt is
   // recomputed from the sessions above, so editing a session moves the amount
@@ -107,6 +115,7 @@ export async function getMonthData(monthKey: string) {
   return {
     month,
     members: memberRows,
+    covers,
     dailySessions: sessionsWithAttendees,
     settlement: {
       ...settlement,
